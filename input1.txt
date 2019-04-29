@@ -1,0 +1,25 @@
+int main(int x, float t){
+	{
+		struct j f;
+	}
+	if(x >6){
+		return gui.kop[2];
+	}
+	int x;
+}
+
+struct test{
+  float tt;
+};
+
+bool c[6];
+struct j f;
+
+struct tet{
+   void d;
+};
+
+void test(bool x,float y){
+
+}
+
