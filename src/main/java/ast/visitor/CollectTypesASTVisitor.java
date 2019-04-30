@@ -34,6 +34,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
             d.accept(this);
         }
         findMainFunction();
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
@@ -46,6 +47,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         
         if(!TypeUtils.isAssignable(type1, type2))
             ASTUtils.error(node,"Cannot assign "+type2.getClassName()+" to "+type1.getClassName());
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
 
@@ -61,14 +63,26 @@ public class CollectTypesASTVisitor implements ASTVisitor {
             
         }catch(NotNumbersException e){
             ASTUtils.error(node, "The expressions are not Numbers.");
+        }catch(CanNotApplyLogicalOperatorException e){
+            ASTUtils.error(node, "The expressions between logical operators should be integers.");
+        }catch(NotComparableException e){
+            ASTUtils.error(node, "The expressions are not comparable.");
         }catch(TypeException e){
-            ASTUtils.error(node, "Type Exception");
+            ASTUtils.error(node, "Error in Binary Expression "+node.getOperator());
         }
     }
 
     @Override
     public void visit(UnaryExpression node) throws ASTVisitorException {
         node.getExpression().accept(this);
+        Type type = ASTUtils.getType(node.getExpression());
+        
+        try{
+            Type nodeType = TypeUtils.applyUnary(node.getOperator(), type);
+            ASTUtils.setType(node, nodeType);
+        }catch(TypeException e){
+            ASTUtils.error(node, "Error in Binary Expression "+node.getOperator());
+        }
     }
 
 
@@ -91,19 +105,23 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(StringLiteralExpression node) throws ASTVisitorException {
-        ASTUtils.setType(node, Type.getType(String.class));
+        ASTUtils.setType(node, Type.getType("[C"));
     }
 
     @Override
     public void visit(ParenthesisExpression node) throws ASTVisitorException {
 
         node.getExpression().accept(this);
+        ASTUtils.setType(node, ASTUtils.getType(node.getExpression()));
     }
 
     @Override
     public void visit(WhileStatement node) throws ASTVisitorException {
         node.getExpression().accept(this);
+        if(ASTUtils.getSafeType(node.getExpression())!=Type.BOOLEAN_TYPE)
+            ASTUtils.error(node,"The Expression inside the if must be logical");
         node.getStatement().accept(this);
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
     
     @Override
@@ -111,6 +129,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         for (Statement s : node.getStatements()) {
             s.accept(this);
         }
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     
@@ -118,16 +137,19 @@ public class CollectTypesASTVisitor implements ASTVisitor {
     @Override
     public void visit(Array node) throws ASTVisitorException {
         node.getType().accept(this);
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
     public void visit(ParameterDeclaration node) throws ASTVisitorException {
         node.getVariable().accept(this);
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
         node.getType().accept(this);
+        ASTUtils.setType(node, ASTUtils.getSafeType(node.getType()));
     }
 
     @Override
@@ -145,6 +167,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         for(Statement s: node.getStatements()){
             s.accept(this);
         }   
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
@@ -152,11 +175,13 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         for(VariableDefinition v: node.getVariables()){
             v.accept(this);
        }
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         node.getIndex().accept(this);
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
@@ -221,6 +246,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         if(!ASTUtils.getWhileLoopState(node)){
             ASTUtils.error(node,"Break statement should be inside a while Loop.");
         }
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
@@ -228,24 +254,34 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         if(!ASTUtils.getWhileLoopState(node)){
             ASTUtils.error(node,"Continue statement should be inside a while Loop.");
         }
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
     public void visit(EmptyStatement node) throws ASTVisitorException {
         node.getExpression().accept(this); 
+        ASTUtils.setType(node, ASTUtils.getSafeType(node.getExpression()));
     }
 
     @Override
     public void visit(IfElseStatement node) throws ASTVisitorException {
         node.getExpression().accept(this);
+        if(ASTUtils.getSafeType(node.getExpression())!=Type.BOOLEAN_TYPE)
+            ASTUtils.error(node,"The Expression must be logical");
+        
         node.getStatement().accept(this);
         node.getElseStatement().accept(this);
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
     public void visit(IfStatement node) throws ASTVisitorException {
         node.getExpression().accept(this);
+        if(ASTUtils.getSafeType(node.getExpression())!=Type.BOOLEAN_TYPE)
+            ASTUtils.error(node,"The Expression must be logical");
+        
         node.getStatement().accept(this);
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
@@ -269,21 +305,24 @@ public class CollectTypesASTVisitor implements ASTVisitor {
            
         if(!TypeUtils.isAssignable(returnType, exprType))
             ASTUtils.error(node,"The return type should be "+returnType.getClassName()+", and cannot be cast from "+exprType.getClassName());
+        
+        ASTUtils.setType(node,returnType);
     }
 
     @Override
     public void visit(TypeSpecifier node) throws ASTVisitorException {
-
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
     
      @Override
     public void visit(StructSpecifier node) throws ASTVisitorException {
-        
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
         node.getVariable().accept(this);
+        ASTUtils.setType(node,ASTUtils.getType(node.getVariable()));
     }
 
    private void findMainFunction() throws ASTVisitorException{

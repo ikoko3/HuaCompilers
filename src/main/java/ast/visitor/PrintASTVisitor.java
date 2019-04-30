@@ -4,36 +4,9 @@ package ast.visitor;
  * This code is part of the lab exercises for the Compilers course at Harokopio
  * University of Athens, Dept. of Informatics and Telematics.
  */
-import ast.expression.StructArrayAccessExpression;
-import ast.expression.FunctionCallExpression;
-import ast.expression.UnaryExpression;
-import ast.expression.FloatLiteralExpression;
-import ast.expression.StringLiteralExpression;
-import ast.expression.Expression;
-import ast.expression.ParenthesisExpression;
-import ast.expression.StructVariableAccessExpression;
-import ast.expression.BinaryExpression;
-import ast.expression.IdentifierExpression;
-import ast.expression.ArrayAccessExpression;
-import ast.expression.BooleanLiteralExpression;
-import ast.expression.CharLiteralExpression;
-import ast.expression.IntegerLiteralExpression;
-import ast.statement.ReturnStatement;
-import ast.statement.ContinueStatement;
-import ast.statement.WhileStatement;
-import ast.statement.IfStatement;
-import ast.statement.EmptyStatement;
-import ast.statement.BreakStatement;
-import ast.statement.IfElseStatement;
-import ast.statement.CompoundStatement;
-import ast.statement.AssignmentStatement;
-import ast.statement.Statement;
-import ast.definition.Definition;
-import ast.definition.Array;
-import ast.definition.FunctionDefinition;
-import ast.definition.Variable;
-import ast.definition.VariableDefinition;
-import ast.definition.StructDefinition;
+import ast.expression.*;
+import ast.statement.*;
+import ast.definition.*;
 import ast.*;
 
 
@@ -105,8 +78,10 @@ public class PrintASTVisitor implements ASTVisitor {
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
         node.getExpression1().accept(this);
-        System.out.print("=");
+        System.out.print(" = ");
         node.getExpression2().accept(this);
+        System.out.print(";");
+        System.out.println("");
     }
 
     @Override
@@ -233,7 +208,7 @@ public class PrintASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(ReturnStatement node) throws ASTVisitorException {
-        System.out.print("return");
+        System.out.print("return ");
         if(node.getExpression()!=null)
             node.getExpression().accept(this);
         System.out.println(";");

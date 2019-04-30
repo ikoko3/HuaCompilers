@@ -16,7 +16,13 @@ void main(){
 	y=43;
 	myFunction(5,3);
 	struct struct2 a;
-	a.b.d[5] = 3;
+	a.b.d[5] = -3;
+	float z;
+	while(z==0){
+		continue;
+	}
+	char str[5];
+	str = "test";
 }
 
 struct struct2{

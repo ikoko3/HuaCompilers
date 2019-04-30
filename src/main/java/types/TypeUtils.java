@@ -84,6 +84,8 @@ public class TypeUtils {
         switch (op) {
             case MINUS:
                 return isNumber(type);
+            case NOT:
+                return type.equals(Type.BOOLEAN);
             default:
                 return false;
         }
@@ -108,6 +110,14 @@ public class TypeUtils {
         }
         return true;
     }
+    
+    public static boolean areIntegers(Type... types){
+        for (Type t : types) {
+            if (!(t.equals(Type.INT_TYPE))) 
+                return false;
+        }
+        return true;
+    }
 
     public static Type applyUnary(Operator op, Type type) throws TypeException {
         if (!op.isUnary()) {
@@ -121,18 +131,21 @@ public class TypeUtils {
 
     public static Type applyBinary(Operator op, Type t1, Type t2) throws TypeException {
         if(op.isArithmetic()){
-            if(!areNumbers(t1,t2))
+            if(!areNumbers(t1,t2)) 
                 throw new NotNumbersException();
-
             return maxType(t1,t2);
         }
         else if (op.isRelational()) {
-            if (TypeUtils.areComparable(t1, t2)) {
-                return Type.BOOLEAN_TYPE;
-            } else {
-                throw new TypeException("Expressions are not comparable");
-            }
-        }  else {
+            if(!TypeUtils.areComparable(t1, t2)) 
+                throw new NotComparableException("Expressions are not comparable");
+            return Type.BOOLEAN_TYPE;
+        } 
+        else if(op.isLogical()){
+            if(!areIntegers(t1,t2)) 
+                throw new CanNotApplyLogicalOperatorException("The types must be integer");
+            return Type.BOOLEAN_TYPE;
+        }
+        else {
             throw new TypeException("Operator " + op + " not supported");
         }
     }
