@@ -12,6 +12,7 @@ import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
 import ast.*;
+import core.Enviroment;
 import org.objectweb.asm.Type;
 import symbol.SymTable;
 import symbol.SymTableEntry;
@@ -32,7 +33,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         for (Definition d : node.getDefinitions()) {
             d.accept(this);
         }
-        
+        findMainFunction();
     }
 
     @Override
@@ -206,11 +207,13 @@ public class CollectTypesASTVisitor implements ASTVisitor {
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
         node.getStruct().accept(this);
         node.getIndex().accept(this);
+        ASTUtils.setType(node,ASTUtils.getType(node.getStruct()));
     }
 
     @Override
     public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
         node.getStruct().accept(this);
+        ASTUtils.setType(node,ASTUtils.getType(node.getStruct()) );
     }
 
     @Override
@@ -280,18 +283,19 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
-        String varName = node.getVariable().getName();
-        Type varType = node.getVariable().getType().getType();
-        
-        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
-        // if(st.lookupOnlyInTop(varName) != null)
-        //     ASTUtils.error(node, "Dublicate variable declaration: "+varName);
-        
-        st.put(varName, new SymTableEntry(varName,varType));
-        
         node.getVariable().accept(this);
     }
 
-   
+   private void findMainFunction() throws ASTVisitorException{
+       SymTable<SymTableEntry>  rootSymbolTable = ASTUtils.getSafeSymbolTable(Registry.getInstance().getRoot());
+       
+       SymTableEntry mainFunction = rootSymbolTable.lookup(Enviroment.MAIN_FUNCTION);
+       if(mainFunction == null)
+           throw new ASTVisitorException("Cannot find main function.");
+       
+       Type expectedType = Type.getMethodType(Type.VOID_TYPE);
+       if(!mainFunction.getType().equals(expectedType))
+           throw new ASTVisitorException("Main function must return void and have 0 parameters.");
+   }
 
 }

@@ -13,6 +13,7 @@ import ast.definition.*;
 
 
 import ast.*;
+import core.Enviroment;
 import org.objectweb.asm.Type;
 import symbol.SymTable;
 import symbol.SymTableEntry;
@@ -29,6 +30,8 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(CompUnit node) throws ASTVisitorException {
+        addPrintFunctionToSymbolTable();
+        
         for (Definition d : node.getDefinitions()) {
             d.accept(this);
         }
@@ -288,8 +291,13 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         boolean isInFunction = Registry.getInstance().isInFunctionDefinition();
         String functionName = Registry.getInstance().getCurrentFunctionName();
         
-        ASTUtils.setFunctionProperties(node, isInFunction, functionName);
-
+        ASTUtils.setFunctionProperties(node, isInFunction, functionName);        
+    }
+    
+    private void addPrintFunctionToSymbolTable() throws ASTVisitorException{
+        SymTable<SymTableEntry>  rootSymbolTable = ASTUtils.getSafeSymbolTable(Registry.getInstance().getRoot());
+        Type functionType = Type.getMethodType(Type.VOID_TYPE,Type.getType(Object.class));
         
+        rootSymbolTable.put(Enviroment.PRINT_FUNCTION, new SymTableEntry(Enviroment.PRINT_FUNCTION,functionType));
     }
 }
