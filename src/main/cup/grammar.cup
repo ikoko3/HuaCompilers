@@ -16,6 +16,8 @@ import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
 
+import core.*;
+
 parser code
 {:
     private static final Logger LOGGER = LoggerFactory.getLogger(parser.class);

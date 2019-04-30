@@ -3,12 +3,21 @@ int main(int x, float t){
 		struct j f;
 	}
 	if(x >6){
-		return gui.kop[2];
+		return 5;
 	}
-	int x;
+	int myArray[6];
+
+	float y;
+	x + 3;
+	while(x > 1){
+		break;
+	}
+	x=78;
+	y=43;
+	myFunction(5,3);
 }
 
-struct test{
+struct tt{
   float tt;
 };
 
@@ -19,7 +28,7 @@ struct tet{
    void d;
 };
 
-void test(bool x,float y){
-
+float myFunction(int x,int y){
+	return y;
 }
 

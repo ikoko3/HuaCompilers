@@ -60,7 +60,7 @@ public class Compiler {
                     compUnit.accept(new CollectSymbolsASTVisitor());
 
                     //collect types
-                    //compUnit.accept(new CollectTypesASTVisitor());
+                    compUnit.accept(new CollectTypesASTVisitor());
                     
                     // print program
                     LOGGER.info("Input:");

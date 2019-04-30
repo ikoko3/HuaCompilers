@@ -85,7 +85,7 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         node.getExpression().accept(this);
         setWhileLoopState(true);
         node.getStatement().accept(this);
-        setWhileLoopState(true);
+        setWhileLoopState(false);
         setProperties(node);
     }
     
@@ -101,6 +101,15 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Array node) throws ASTVisitorException {
+        String varName = node.getName();
+        Type varType = Type.getType("["+node.getType().getType().getDescriptor());
+        
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        if(st.lookupOnlyInTop(varName) != null)
+            ASTUtils.error(node, "Dublicate variable declaration: "+varName);
+        
+        st.put(varName, new SymTableEntry(varName,varType));
+        
         node.getType().accept(this);
         setProperties(node);
     }
@@ -113,6 +122,15 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
+        String varName = node.getName();
+        Type varType = node.getType().getType();
+        
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        if(st.lookupOnlyInTop(varName) != null)
+            ASTUtils.error(node, "Dublicate variable declaration: "+varName);
+        
+        st.put(varName, new SymTableEntry(varName,varType));
+        
         node.getType().accept(this);
         setProperties(node);
     }
@@ -131,6 +149,10 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         st.put(node.getName(), new SymTableEntry(node.getName(),functionType));
         
         setFunctionState(node.getName());
+        for(ParameterDeclaration p :node.getParameters()){
+            p.accept(this);
+        }
+        
         for(Statement s: node.getStatements()){
             s.accept(this);
         }   
@@ -243,16 +265,8 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
-        String varName = node.getVariable().getName();
-        Type varType = node.getVariable().getType().getType();
-        
-        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
-        if(st.lookupOnlyInTop(varName) != null)
-            ASTUtils.error(node, "Dublicate variable declaration: "+varName);
-        
-        st.put(varName, new SymTableEntry(varName,varType));
-        
         node.getVariable().accept(this);
+        setProperties(node);
     }
 
     private void setFunctionState(String functionName){

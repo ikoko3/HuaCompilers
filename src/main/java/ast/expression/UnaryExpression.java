@@ -6,7 +6,7 @@ package ast.expression;
 
 import ast.visitor.ASTVisitor;
 import ast.visitor.ASTVisitorException;
-import ast.Operator;
+import core.Operator;
 
 public class UnaryExpression extends Expression {
 

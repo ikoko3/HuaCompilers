@@ -1,6 +1,7 @@
 package types;
 
-import ast.Operator;
+import types.exception.*;
+import core.Operator;
 import ast.ParameterDeclaration;
 import java.util.List;
 import java.util.Set;
@@ -119,34 +120,28 @@ public class TypeUtils {
     }
 
     public static Type applyBinary(Operator op, Type t1, Type t2) throws TypeException {
-        if (op.isRelational()) {
+        if(op.isArithmetic()){
+            if(!areNumbers(t1,t2))
+                throw new NotNumbersException();
+
+            return maxType(t1,t2);
+        }
+        else if (op.isRelational()) {
             if (TypeUtils.areComparable(t1, t2)) {
                 return Type.BOOLEAN_TYPE;
             } else {
                 throw new TypeException("Expressions are not comparable");
             }
-        } else if (op.equals(Operator.PLUS)) {
-            return maxType(t1, t2);
-        } else if (op.equals(Operator.MINUS) || op.equals(Operator.DIVISION) || op.equals(Operator.MULTIPLY)) {
-            if (t1.equals(TypeUtils.STRING_TYPE) || t2.equals(TypeUtils.STRING_TYPE)) {
-                throw new TypeException("Expressions cannot be handled as numbers");
-            }
-            if (t1.equals(Type.BOOLEAN_TYPE) || t2.equals(Type.BOOLEAN_TYPE)) {
-                throw new TypeException("Expressions cannot be handled as numbers");
-            }
-            return maxType(t1, t2);
-        } else {
+        }  else {
             throw new TypeException("Operator " + op + " not supported");
         }
     }
 
     public static boolean areComparable(Type type1, Type type2) {
-        if (type1.equals(Type.BOOLEAN_TYPE)) {
-            return type2.equals(Type.BOOLEAN_TYPE);
-        } else if (type1.equals(Type.INT_TYPE)) {
-            return type2.equals(Type.INT_TYPE) || type2.equals(Type.DOUBLE_TYPE);
-        } else if (type1.equals(Type.DOUBLE_TYPE)) {
-            return type2.equals(Type.INT_TYPE) || type2.equals(Type.DOUBLE_TYPE);
+        if (type1.equals(Type.INT_TYPE) || type1.equals(Type.FLOAT_TYPE)) {
+             return type2.equals(Type.INT_TYPE) || type2.equals(Type.DOUBLE_TYPE);
+        } else if (type1.equals(Type.CHAR_TYPE)) {
+            return type2.equals(Type.CHAR_TYPE);
         } else { // string
             return type2.equals(TypeUtils.STRING_TYPE);
         }

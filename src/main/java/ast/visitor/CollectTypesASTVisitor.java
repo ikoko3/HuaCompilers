@@ -15,7 +15,7 @@ import ast.*;
 import org.objectweb.asm.Type;
 import symbol.SymTable;
 import symbol.SymTableEntry;
-import types.TypeException;
+import types.exception.*;
 import types.TypeUtils;
 
 /**
@@ -40,6 +40,11 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         node.getExpression1().accept(this);
         node.getExpression2().accept(this);
        
+        Type type1 = ASTUtils.getSafeType(node.getExpression1());
+        Type type2 = ASTUtils.getSafeType(node.getExpression2());
+        
+        if(!TypeUtils.isAssignable(type1, type2))
+            ASTUtils.error(node,"Cannot assign "+type2.getClassName()+" to "+type1.getClassName());
     }
 
 
@@ -52,6 +57,9 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         try{
             Type type = TypeUtils.applyBinary(node.getOperator(), type1, type2);
             ASTUtils.setType(node, type);
+            
+        }catch(NotNumbersException e){
+            ASTUtils.error(node, "The expressions are not Numbers.");
         }catch(TypeException e){
             ASTUtils.error(node, "Type Exception");
         }
@@ -65,18 +73,24 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(IdentifierExpression node) throws ASTVisitorException {
-
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        
+        SymTableEntry entry = st.lookup(node.getIdentifier());
+        if(entry == null)
+            ASTUtils.error(node, "variable "+node.getIdentifier()+" has not been declared: ");
+        
+        ASTUtils.setType(node, entry.getType());
     }
 
 
     @Override
     public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
-
+        ASTUtils.setType(node, Type.INT_TYPE);
     }
 
     @Override
     public void visit(StringLiteralExpression node) throws ASTVisitorException {
-
+        ASTUtils.setType(node, Type.getType(String.class));
     }
 
     @Override
@@ -137,10 +151,6 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         for(VariableDefinition v: node.getVariables()){
             v.accept(this);
        }
-        if(Registry.getInstance().getStructs().get(node.getName()) != null)
-            ASTUtils.error(node, "Dublicate Struct declaration: "+node.getName());
-        
-       Registry.getInstance().getStructs().put(node.getName(), ASTUtils.getSafeSymbolTable(node));
     }
 
     @Override
@@ -150,24 +160,45 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(BooleanLiteralExpression node) throws ASTVisitorException {
-
+        ASTUtils.setType(node, Type.BOOLEAN_TYPE);
     }
 
     @Override
     public void visit(CharLiteralExpression node) throws ASTVisitorException {
-
+        ASTUtils.setType(node, Type.CHAR_TYPE);
     }
 
     @Override
     public void visit(FloatLiteralExpression node) throws ASTVisitorException {
-
+        ASTUtils.setType(node, Type.FLOAT_TYPE);
     }
 
     @Override
     public void visit(FunctionCallExpression node) throws ASTVisitorException {
-        for(Expression e: node.getExpressions()){
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        
+        if(st.lookup(node.getIdentifier())==null)
+            ASTUtils.error(node,"The function "+node.getIdentifier()+" has not been declared.");
+        
+        Type functionType = st.lookup(node.getIdentifier()).getType();
+        int expectedArguements = functionType.getArgumentTypes().length;
+        int givenArguements = node.getExpressions().size();
+        
+        if( givenArguements != expectedArguements )
+            ASTUtils.error(node,"Expected "+expectedArguements+" arguements found "+givenArguements);
+        
+        for(int i=0;i<expectedArguements;i++){
+            Expression e = node.getExpressions().get(i);
             e.accept(this);
+            
+            Type givenType = ASTUtils.getSafeType(e);
+            Type expectedType = functionType.getArgumentTypes()[i];
+            if(!TypeUtils.isAssignable(expectedType, givenType))
+               ASTUtils.error(node, "Expected "+expectedType.getClassName()+", received "+givenType.getClassName());
+            
         }
+        
+        ASTUtils.setType(node, functionType.getReturnType());
     }
 
 
@@ -184,12 +215,16 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(BreakStatement node) throws ASTVisitorException {
-
+        if(!ASTUtils.getWhileLoopState(node)){
+            ASTUtils.error(node,"Break statement should be inside a while Loop.");
+        }
     }
 
     @Override
     public void visit(ContinueStatement node) throws ASTVisitorException {
-
+        if(!ASTUtils.getWhileLoopState(node)){
+            ASTUtils.error(node,"Continue statement should be inside a while Loop.");
+        }
     }
 
     @Override
@@ -212,8 +247,25 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(ReturnStatement node) throws ASTVisitorException {
-        if(node.getExpression()!=null)
+        if(!ASTUtils.getFunctionState(node))
+            ASTUtils.error(node,"Return should only be declared inside functions.");
+        
+        Type exprType;
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        Type returnType = st.lookup(ASTUtils.getCurrentFunctionName(node)).getType().getReturnType();
+        
+        if(node.getExpression()!=null){
             node.getExpression().accept(this);
+            exprType = ASTUtils.getSafeType(node.getExpression());
+        }else{
+            exprType = Type.VOID_TYPE;
+            if(returnType != Type.VOID_TYPE){
+                 ASTUtils.error(node,"The function must return "+returnType.getClassName());
+            }
+        }
+           
+        if(!TypeUtils.isAssignable(returnType, exprType))
+            ASTUtils.error(node,"The return type should be "+returnType.getClassName()+", and cannot be cast from "+exprType.getClassName());
     }
 
     @Override
@@ -232,8 +284,8 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         Type varType = node.getVariable().getType().getType();
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
-        /*if(st.lookupOnlyInTop(varName) != null)
-            ASTUtils.error(node, "Dublicate variable declaration: "+varName);*/
+        // if(st.lookupOnlyInTop(varName) != null)
+        //     ASTUtils.error(node, "Dublicate variable declaration: "+varName);
         
         st.put(varName, new SymTableEntry(varName,varType));
         
