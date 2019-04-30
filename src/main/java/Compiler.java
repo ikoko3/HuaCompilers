@@ -1,6 +1,12 @@
 
+
+import core.Registry;
+import ast.visitor.CollectSymbolsASTVisitor;
+import ast.visitor.SymTableBuilderASTVisitor;
+import ast.visitor.PrintASTVisitor;
+import ast.visitor.CollectTypesASTVisitor;
 import ast.ASTNode;
-import ast.ASTVisitor;
+import ast.visitor.ASTVisitor;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +21,7 @@ public class Compiler {
     private static final Logger LOGGER = LoggerFactory.getLogger(Compiler.class);
 
     public static void main(String[] args) {
+        System.out.println("Hello world!");
         if (args.length == 0) {
             LOGGER.info("Usage : java Compiler [ --encoding <name> ] <inputfile(s)>");
         } else {
@@ -52,7 +59,8 @@ public class Compiler {
                     //collect symbols
                     compUnit.accept(new CollectSymbolsASTVisitor());
 
-                    compUnit.accept(new CollectTypesASTVisitor());
+                    //collect types
+                    //compUnit.accept(new CollectTypesASTVisitor());
                     
                     // print program
                     LOGGER.info("Input:");
@@ -67,7 +75,7 @@ public class Compiler {
                     LOGGER.error(e.toString());
                 } catch (Exception e) {
                     LOGGER.error(e.getMessage());
-                    //e.printStackTrace();
+                    e.printStackTrace();
                 }
             }
         }

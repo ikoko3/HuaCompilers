@@ -4,8 +4,8 @@
  */
 package ast.expression;
 
-import ast.ASTVisitor;
-import ast.ASTVisitorException;
+import ast.visitor.ASTVisitor;
+import ast.visitor.ASTVisitorException;
 import ast.Operator;
 
 public class UnaryExpression extends Expression {

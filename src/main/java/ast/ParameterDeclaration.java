@@ -5,6 +5,8 @@
  */
 package ast;
 
+import ast.visitor.ASTVisitor;
+import ast.visitor.ASTVisitorException;
 import ast.definition.Variable;
 
 /**

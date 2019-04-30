@@ -4,8 +4,8 @@
  */
 package ast.statement;
 
-import ast.ASTVisitor;
-import ast.ASTVisitorException;
+import ast.visitor.ASTVisitor;
+import ast.visitor.ASTVisitorException;
 import java.util.ArrayList;
 import java.util.List;
 

@@ -1,3 +1,5 @@
+package ast.visitor;
+
 
 /**
  * This code is part of the lab exercises for the Compilers course at Harokopio
@@ -5,6 +7,7 @@
  * University of Athens, Dept. of Informatics and Telematics.
  */
 
+import core.Registry;
 import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
@@ -120,8 +123,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         ASTNode root = Registry.getInstance().getRoot();
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(root);
-        if(st.lookup(node.getName()) != null)
-            ASTUtils.error(node, "Dublicate function declaration: "+node.getName());
+        
         
         st.put(node.getName(), new SymTableEntry(node.getName(),functionType));
         
@@ -230,8 +232,8 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         Type varType = node.getVariable().getType().getType();
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
-        if(st.lookupOnlyInTop(varName) != null)
-            ASTUtils.error(node, "Dublicate variable declaration: "+varName);
+        /*if(st.lookupOnlyInTop(varName) != null)
+            ASTUtils.error(node, "Dublicate variable declaration: "+varName);*/
         
         st.put(varName, new SymTableEntry(varName,varType));
         

@@ -14,21 +14,17 @@ public class TypeUtils {
     }
 
     public static Type maxType(Type type1, Type type2) {
-        if (type1.equals(STRING_TYPE)) {
+        if (type1.equals(Type.FLOAT_TYPE)) {
             return type1;
-        } else if (type2.equals(STRING_TYPE)) {
-            return type2;
-        } else if (type1.equals(Type.DOUBLE_TYPE)) {
-            return type1;
-        } else if (type2.equals(Type.DOUBLE_TYPE)) {
+        } else if (type2.equals(Type.FLOAT_TYPE)) {
             return type2;
         } else if (type1.equals(Type.INT_TYPE)) {
             return type1;
         } else if (type2.equals(Type.INT_TYPE)) {
             return type2;
-        } else if (type1.equals(Type.BOOLEAN_TYPE)) {
+        } else if (type1.equals(Type.CHAR_TYPE)) {
             return type1;
-        } else if (type2.equals(Type.BOOLEAN_TYPE)) {
+        } else if (type2.equals(Type.CHAR_TYPE)) {
             return type2;
         } else {
             return type1;
@@ -36,21 +32,17 @@ public class TypeUtils {
     }
 
     public static Type minType(Type type1, Type type2) {
-        if (type1.equals(Type.BOOLEAN_TYPE)) {
+        if (type1.equals(Type.CHAR_TYPE)) {
             return type1;
-        } else if (type2.equals(Type.BOOLEAN_TYPE)) {
+        } else if (type2.equals(Type.CHAR_TYPE)) {
             return type2;
         } else if (type1.equals(Type.INT_TYPE)) {
             return type1;
         } else if (type2.equals(Type.INT_TYPE)) {
             return type2;
-        } else if (type1.equals(Type.DOUBLE_TYPE)) {
+        } else if (type1.equals(Type.FLOAT_TYPE)) {
             return type1;
-        } else if (type2.equals(Type.DOUBLE_TYPE)) {
-            return type2;
-        } else if (type1.equals(STRING_TYPE)) {
-            return type1;
-        } else if (type2.equals(STRING_TYPE)) {
+        } else if (type2.equals(Type.FLOAT_TYPE)) {
             return type2;
         } else {
             return type1;
@@ -106,6 +98,14 @@ public class TypeUtils {
                 return true;
         }
         return false;
+    }
+
+    public static boolean areNumbers(Type... types){
+        for (Type t : types) {
+            if (!isNumber(t)) 
+                return false;
+        }
+        return true;
     }
 
     public static Type applyUnary(Operator op, Type type) throws TypeException {

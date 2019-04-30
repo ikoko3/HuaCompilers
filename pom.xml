@@ -4,7 +4,7 @@
 
     <groupId>org.hua</groupId>
     <artifactId>compiler</artifactId>
-    <version>0.0.3</version>
+    <version>0.0.5</version>
     <packaging>jar</packaging>
 
     <name>compilers_5</name>

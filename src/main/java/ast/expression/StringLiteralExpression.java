@@ -4,8 +4,8 @@
  */
 package ast.expression;
 
-import ast.ASTVisitor;
-import ast.ASTVisitorException;
+import ast.visitor.ASTVisitor;
+import ast.visitor.ASTVisitorException;
 
 public class StringLiteralExpression extends Expression {
 

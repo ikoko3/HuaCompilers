@@ -6,8 +6,8 @@
 package ast.definition;
 
 import ast.ASTNode;
-import ast.ASTVisitor;
-import ast.ASTVisitorException;
+import ast.visitor.ASTVisitor;
+import ast.visitor.ASTVisitorException;
 import ast.statement.Statement;
 
 /**

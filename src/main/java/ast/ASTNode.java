@@ -4,6 +4,8 @@
  */
 package ast;
 
+import ast.visitor.ASTVisitor;
+import ast.visitor.ASTVisitorException;
 import java.util.HashMap;
 import java.util.Map;
 
