@@ -12,7 +12,8 @@ import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
 import ast.*;
-import core.Enviroment;
+import core.Environment;
+import java.util.Map;
 import org.objectweb.asm.Type;
 import symbol.SymTable;
 import symbol.SymTableEntry;
@@ -44,7 +45,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
        
         Type type1 = ASTUtils.getSafeType(node.getExpression1());
         Type type2 = ASTUtils.getSafeType(node.getExpression2());
-        
+
         if(!TypeUtils.isAssignable(type1, type2))
             ASTUtils.error(node,"Cannot assign "+type2.getClassName()+" to "+type1.getClassName());
         ASTUtils.setType(node, Type.VOID_TYPE);
@@ -181,7 +182,12 @@ public class CollectTypesASTVisitor implements ASTVisitor {
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         node.getIndex().accept(this);
-        ASTUtils.setType(node, Type.VOID_TYPE);
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        SymTableEntry entry  = st.lookup(node.getIdentifier());
+        if(entry == null)
+            ASTUtils.error(node,"The array "+node.getIdentifier()+" is not defined.");
+        
+        ASTUtils.setType(node, entry.getType().getElementType());
     }
 
     @Override
@@ -232,13 +238,28 @@ public class CollectTypesASTVisitor implements ASTVisitor {
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
         node.getStruct().accept(this);
         node.getIndex().accept(this);
-        ASTUtils.setType(node,ASTUtils.getType(node.getStruct()));
+        Type structType = ASTUtils.getSafeType(node.getStruct());
+        
+        SymTable<SymTableEntry> st = Registry.getInstance().getStructs().get(structType.toString());
+        SymTableEntry entry = st.lookupOnlyInTop(node.getIdentifier());
+        if(entry == null)
+            ASTUtils.error(node, "The struct "+structType+" doesn't contain a variable "+node.getIdentifier());
+        
+        ASTUtils.setType(node,entry.getType().getElementType());
     }
 
     @Override
     public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
         node.getStruct().accept(this);
-        ASTUtils.setType(node,ASTUtils.getType(node.getStruct()) );
+        Type structType = ASTUtils.getSafeType(node.getStruct());
+        
+        SymTable<SymTableEntry> st = Registry.getInstance().getStructs().get(structType.toString());
+        SymTableEntry entry = st.lookupOnlyInTop(node.getIdentifier());
+        if(entry == null)
+            ASTUtils.error(node, "The struct "+structType+" doesn't contain a variable "+node.getIdentifier());
+        
+        
+        ASTUtils.setType(node,entry.getType());
     }
 
     @Override
@@ -328,7 +349,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
    private void findMainFunction() throws ASTVisitorException{
        SymTable<SymTableEntry>  rootSymbolTable = ASTUtils.getSafeSymbolTable(Registry.getInstance().getRoot());
        
-       SymTableEntry mainFunction = rootSymbolTable.lookup(Enviroment.MAIN_FUNCTION);
+       SymTableEntry mainFunction = rootSymbolTable.lookup(Environment.MAIN_FUNCTION);
        if(mainFunction == null)
            throw new ASTVisitorException("Cannot find main function.");
        

@@ -9,8 +9,8 @@ package core;
  *
  * @author john_
  */
-public class Enviroment {
+public class Environment {
     public static final String PRINT_FUNCTION = "print";
     public static final String MAIN_FUNCTION = "main";
-    
+    public static final String STRUCT_TYPE_PREFIX = "struct/";
 }

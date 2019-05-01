@@ -191,7 +191,7 @@ TypeSpecifier ::= CHAR:c
             :}
             | STRUCT IDENTIFIER:id 
             {:
-                RESULT = new StructSpecifier(id,Type.getType("struct/"+id));
+                RESULT = new StructSpecifier(id,Type.getType(Environment.STRUCT_TYPE_PREFIX+id));
                 RESULT.setLine(idleft);
                 RESULT.setColumn(idright);
             :}

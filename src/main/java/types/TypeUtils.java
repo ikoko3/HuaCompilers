@@ -152,7 +152,7 @@ public class TypeUtils {
 
     public static boolean areComparable(Type type1, Type type2) {
         if (type1.equals(Type.INT_TYPE) || type1.equals(Type.FLOAT_TYPE)) {
-             return type2.equals(Type.INT_TYPE) || type2.equals(Type.DOUBLE_TYPE);
+             return type2.equals(Type.INT_TYPE) || type2.equals(Type.FLOAT_TYPE);
         } else if (type1.equals(Type.CHAR_TYPE)) {
             return type2.equals(Type.CHAR_TYPE);
         } else { // string

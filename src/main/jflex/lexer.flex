@@ -118,10 +118,6 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
     [^\n\r\"\\]+                   { sb.append(yytext()); }
     \\t                            { sb.append('\t'); }
     \\n                            { sb.append('\n'); }
-
-    \\r                            { sb.append('\r'); }
-    \\\"                           { sb.append('\"'); }
-    \\                             { sb.append('\\'); }
 }
 
 <CHARACTER> {

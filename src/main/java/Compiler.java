@@ -64,8 +64,7 @@ public class Compiler {
                     
                     // print program
                     LOGGER.info("Input:");
-                    ASTVisitor printVisitor = new PrintASTVisitor();
-                    compUnit.accept(printVisitor);
+                    compUnit.accept(new PrintASTVisitor());
                     
                     LOGGER.info("Compilation done");
                 } catch (java.io.FileNotFoundException e) {

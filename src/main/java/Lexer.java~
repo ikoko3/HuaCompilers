@@ -887,7 +887,7 @@ public final class Lexer implements java_cup.runtime.Scanner {
             }
           case 63: break;
           case 10: 
-            { sb.setLength(0); yybegin(CHARACTER);
+            { yybegin(CHARACTER);
             }
           case 64: break;
           case 11: 
