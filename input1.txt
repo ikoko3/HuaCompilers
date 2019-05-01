@@ -23,6 +23,11 @@ void main(){
 	}
 	char str[5];
 	str = "test";
+
+	char mychar;
+	mychar = '\n';
+	mychar = '\t';
+	mychar = '\0';
 }
 
 struct struct2{

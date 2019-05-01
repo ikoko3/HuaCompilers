@@ -142,7 +142,9 @@ public class PrintASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(CharLiteralExpression node) throws ASTVisitorException {
+        System.out.print("\'");
         System.out.print(node.getExpression());
+        System.out.print("\'");
     }
 
     @Override
@@ -190,20 +192,20 @@ public class PrintASTVisitor implements ASTVisitor {
     public void visit(IfElseStatement node) throws ASTVisitorException {
         System.out.print("if(");
         node.getExpression().accept(this);
-        System.out.println("){");
+        System.out.println(")");
         node.getStatement().accept(this);
-        System.out.println("} else{");
+        System.out.println(" else");
         node.getElseStatement().accept(this);
-        System.out.println("}");
+        System.out.println("");
     }
 
     @Override
     public void visit(IfStatement node) throws ASTVisitorException {
         System.out.print("if(");
         node.getExpression().accept(this);
-        System.out.println("){");
+        System.out.println(")");
         node.getStatement().accept(this);
-        System.out.println("}");
+        System.out.println("");
     }
 
     @Override
@@ -218,9 +220,9 @@ public class PrintASTVisitor implements ASTVisitor {
     public void visit(WhileStatement node) throws ASTVisitorException {
         System.out.print("while(");
         node.getExpression().accept(this);
-        System.out.println("){");
+        System.out.println(")");
         node.getStatement().accept(this);
-        System.out.println("}");
+        System.out.println("");
     }
 
     @Override

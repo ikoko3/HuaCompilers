@@ -70,7 +70,7 @@ parser code
 :};
 
 terminal java.lang.String IDENTIFIER;       // name
-terminal DO, WHILE;
+terminal WHILE;
 terminal FLOAT, INT, CHAR, BOOL;
 terminal IF, ELSE, VOID, RETURN, STRUCT;
 terminal LPAREN, RPAREN, SEMICOLON;
@@ -79,7 +79,7 @@ terminal EQ;
 terminal GREATER, GREATER_EQ, LESS, LESS_EQ;
 terminal EQUAL, NOT_EQUAL;
 terminal TIMES, DIVISION;
-terminal PLUS, MINUS, UMINUS, PLUS_PLUS, MINUS_MINUS, PERCENT;
+terminal PLUS, MINUS, UMINUS, PERCENT;
 terminal AND, OR, NOT, DOT, COMMA;
 terminal BREAK, CONTINUE;
 

@@ -23,7 +23,6 @@ import java_cup.runtime.Symbol;
 
 %{
     private StringBuffer sb = new StringBuffer();
-    private StringBuffer cb = new StringBuffer();
 
     private Symbol createSymbol(int type) {
         return new Symbol(type, yyline+1, yycolumn+1);
@@ -56,7 +55,6 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
 <YYINITIAL> {
     /* reserved keywords */
     "while"                        { return createSymbol(sym.WHILE); }
-    "do"                           { return createSymbol(sym.DO); }
     "float"                        { return createSymbol(sym.FLOAT); }
     "int"                          { return createSymbol(sym.INT); }
     "bool"                         { return createSymbol(sym.BOOL); }
@@ -77,7 +75,7 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
     {FloatLiteral}                 { return createSymbol(sym.FLOAT_LITERAL, Float.valueOf(yytext())); }
 
     \"                             { sb.setLength(0); yybegin(STRING); }
-    \'                             { cb.setLength(0); yybegin(CHARACTER); }
+    \'                             { yybegin(CHARACTER); }
 
     /* operators */
     "="                            { return createSymbol(sym.EQ); }
@@ -98,8 +96,6 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
     ">="                           { return createSymbol(sym.GREATER_EQ); }
     "<"                            { return createSymbol(sym.LESS); }
     "<="                           { return createSymbol(sym.LESS_EQ); }
-    "++"                           { return createSymbol(sym.PLUS_PLUS); }
-    "--"                           { return createSymbol(sym.MINUS_MINUS); }
     "%"                            { return createSymbol(sym.PERCENT); }
     "&&"                           { return createSymbol(sym.AND); }
     "||"                           { return createSymbol(sym.OR); }
@@ -129,16 +125,19 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
 }
 
 <CHARACTER> {
-    \'                             { yybegin(YYINITIAL); 
-                                        return createSymbol(sym.STRING_LITERAL, cb.toString()); 
-                                   } 
+    [^\n\t\0]\'               { yybegin(YYINITIAL);
+                                     return createSymbol(sym.CHARACTER_LITERAL, yytext().charAt(0)); 
+                                   }
+    \\t'                          { yybegin(YYINITIAL);
+                                     return createSymbol(sym.CHARACTER_LITERAL, '\t'); 
+                                   }
+    \\n'                          { yybegin(YYINITIAL);
+                                     return createSymbol(sym.CHARACTER_LITERAL, '\n'); 
+                                   }
+    \\0'                          { yybegin(YYINITIAL);
+                                     return createSymbol(sym.CHARACTER_LITERAL, '\0'); 
+                                   }
 
-    [^\n\0\r]                      { cb.append(yytext()); }
-    \\t                            { cb.append('\t'); }
-    \\n                            { cb.append('\n');  }
-    \\0                            { cb.append('\0'); }
-
-    
 }
 
 /* error fallback */
