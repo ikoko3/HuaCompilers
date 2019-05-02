@@ -65,7 +65,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         }catch(NotNumbersException e){
             ASTUtils.error(node, "The expressions are not Numbers.");
         }catch(CanNotApplyLogicalOperatorException e){
-            ASTUtils.error(node, "The expressions between logical operators should be integers.");
+            ASTUtils.error(node, "The expressions between logical operators should be boolean.");
         }catch(NotComparableException e){
             ASTUtils.error(node, "The expressions are not comparable.");
         }catch(TypeException e){

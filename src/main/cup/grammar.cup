@@ -106,9 +106,9 @@ non terminal List<VariableDefinition> VariableDefinitions;
 non terminal StructDefinition StructDefinition;
 
 precedence left COMMA;
-precedence left LESS, LESS_EQ, GREATER, GREATER_EQ;
 precedence left OR;
 precedence left AND;
+precedence left LESS, LESS_EQ, GREATER, GREATER_EQ;
 precedence left EQUAL, NOT_EQUAL;
 precedence left PLUS, MINUS, PERCENT;
 precedence left TIMES, DIVISION;

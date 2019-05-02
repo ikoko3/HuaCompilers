@@ -111,9 +111,9 @@ public class TypeUtils {
         return true;
     }
     
-    public static boolean areIntegers(Type... types){
+    public static boolean haveLogicalType(Type... types){
         for (Type t : types) {
-            if (!(t.equals(Type.INT_TYPE))) 
+            if (!(t.equals(Type.BOOLEAN_TYPE))) 
                 return false;
         }
         return true;
@@ -141,8 +141,8 @@ public class TypeUtils {
             return Type.BOOLEAN_TYPE;
         } 
         else if(op.isLogical()){
-            if(!areIntegers(t1,t2)) 
-                throw new CanNotApplyLogicalOperatorException("The types must be integer");
+            if(!haveLogicalType(t1,t2)) 
+                throw new CanNotApplyLogicalOperatorException("The types must be logical");
             return Type.BOOLEAN_TYPE;
         }
         else {
