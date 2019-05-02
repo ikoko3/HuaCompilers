@@ -86,7 +86,7 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
     "]"                            { return createSymbol(sym.RSQBRACKET); }
     ";"                            { return createSymbol(sym.SEMICOLON); }
     ","                            { return createSymbol(sym.COMMA); }
-
+ 
     /* operators */
     "="                            { return createSymbol(sym.EQ); }
     "+"                            { return createSymbol(sym.PLUS); }
