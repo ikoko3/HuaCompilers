@@ -109,7 +109,7 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
         if(st.lookupOnlyInTop(varName) != null)
-            ASTUtils.error(node, "Dublicate variable declaration: "+varName);
+            ASTUtils.error(node, "Dublicate array declaration: "+varName);
         
         st.put(varName, new SymTableEntry(varName,varType));
         
