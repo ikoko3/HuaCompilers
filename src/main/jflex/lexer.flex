@@ -75,14 +75,9 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
     {FloatLiteral}                 { return createSymbol(sym.FLOAT_LITERAL, Float.valueOf(yytext())); }
 
     \"                             { sb.setLength(0); yybegin(STRING); }
-    \'                             { yybegin(CHARACTER); }
+    \'                             { sb.setLength(0); yybegin(CHARACTER); }
 
-    /* operators */
-    "="                            { return createSymbol(sym.EQ); }
-    "+"                            { return createSymbol(sym.PLUS); }
-    "-"                            { return createSymbol(sym.MINUS); }
-    "*"                            { return createSymbol(sym.TIMES); }
-    "/"                            { return createSymbol(sym.DIVISION); }
+    /* separators */
     "("                            { return createSymbol(sym.LPAREN); }
     ")"                            { return createSymbol(sym.RPAREN); }
     "{"                            { return createSymbol(sym.LBRACKET); }
@@ -90,6 +85,14 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
     "["                            { return createSymbol(sym.LSQBRACKET); }
     "]"                            { return createSymbol(sym.RSQBRACKET); }
     ";"                            { return createSymbol(sym.SEMICOLON); }
+    ","                            { return createSymbol(sym.COMMA); }
+ 
+    /* operators */
+    "="                            { return createSymbol(sym.EQ); }
+    "+"                            { return createSymbol(sym.PLUS); }
+    "-"                            { return createSymbol(sym.MINUS); }
+    "*"                            { return createSymbol(sym.TIMES); }
+    "/"                            { return createSymbol(sym.DIVISION); } 
     "=="                           { return createSymbol(sym.EQUAL); }
     "!="                           { return createSymbol(sym.NOT_EQUAL); }
     ">"                            { return createSymbol(sym.GREATER); }
@@ -101,7 +104,6 @@ FloatLiteral   = {Float1} | {Float2} | {Float3} | {Float4}
     "||"                           { return createSymbol(sym.OR); }
     "!"                            { return createSymbol(sym.NOT); }
     "."                            { return createSymbol(sym.DOT); }
-    ","                            { return createSymbol(sym.COMMA); }
 
     /* comments */
     {Comment}                      { /* ignore */ }

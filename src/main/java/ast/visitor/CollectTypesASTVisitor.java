@@ -243,7 +243,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         SymTable<SymTableEntry> st = Registry.getInstance().getStructs().get(structType.toString());
         SymTableEntry entry = st.lookupOnlyInTop(node.getIdentifier());
         if(entry == null)
-            ASTUtils.error(node, "The struct "+structType+" doesn't contain a variable "+node.getIdentifier());
+            ASTUtils.error(node, "The struct "+structType+" doesn't contain variable "+node.getIdentifier());
         
         ASTUtils.setType(node,entry.getType().getElementType());
     }
@@ -256,7 +256,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         SymTable<SymTableEntry> st = Registry.getInstance().getStructs().get(structType.toString());
         SymTableEntry entry = st.lookupOnlyInTop(node.getIdentifier());
         if(entry == null)
-            ASTUtils.error(node, "The struct "+structType+" doesn't contain a variable "+node.getIdentifier());
+            ASTUtils.error(node, "The struct "+structType+" doesn't contain variable "+node.getIdentifier());
         
         
         ASTUtils.setType(node,entry.getType());
