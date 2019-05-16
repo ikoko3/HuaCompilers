@@ -7,7 +7,7 @@
     <version>0.0.5</version>
     <packaging>jar</packaging>
 
-    <name>compilers_5</name>
+    <name>compilers</name>
     <url>http://www.dit.hua.gr</url>
 
     <properties>
