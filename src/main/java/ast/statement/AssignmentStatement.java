@@ -10,31 +10,31 @@ import ast.expression.Expression;
 
 public class AssignmentStatement extends Statement {
 
-    private Expression Expression1;
-    private Expression Expression2;
+    private Expression target;
+    private Expression result;
 
-    public Expression getExpression1() {
-        return Expression1;
+    public Expression getTarget() {
+        return target;
     }
 
-    public void setExpression1(Expression Expression1) {
-        this.Expression1 = Expression1;
+    public void setTarget(Expression target) {
+        this.target = target;
     }
 
-    public Expression getExpression2() {
-        return Expression2;
+    public Expression getResult() {
+        return result;
     }
 
-    public void setExpression2(Expression Expression2) {
-        this.Expression2 = Expression2;
+    public void setResult(Expression result) {
+        this.result = result;
     }
 
     public AssignmentStatement() {
     }
 
     public AssignmentStatement(Expression Expression1, Expression Expression2) {
-        this.Expression1 = Expression1;
-        this.Expression2 = Expression2;
+        this.target = Expression1;
+        this.result = Expression2;
     }
     
     

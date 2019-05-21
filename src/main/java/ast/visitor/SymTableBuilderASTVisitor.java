@@ -42,8 +42,8 @@ public class SymTableBuilderASTVisitor implements ASTVisitor {
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
         ASTUtils.setSymbolTable(node, stack.element());
-        node.getExpression1().accept(this);
-        node.getExpression2().accept(this);
+        node.getTarget().accept(this);
+        node.getResult().accept(this);
     }
 
 

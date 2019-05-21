@@ -1,16 +1,9 @@
 
-
 import core.Registry;
-import ast.visitor.CollectSymbolsASTVisitor;
-import ast.visitor.SymTableBuilderASTVisitor;
-import ast.visitor.PrintASTVisitor;
-import ast.visitor.CollectTypesASTVisitor;
+import ast.visitor.*;
 import ast.ASTNode;
-import ast.visitor.ASTVisitor;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import symbol.SymTable;
 
 /**
  * This code is part of the lab exercises for the Compilers course at Harokopio
@@ -66,6 +59,13 @@ public class Compiler {
                     LOGGER.info("Input:");
                     compUnit.accept(new PrintASTVisitor());
                     
+                    // print 3-address code
+                    /*LOGGER.info("3-address code:");
+                    IntermediateCodeASTVisitor threeAddrVisitor = new IntermediateCodeASTVisitor();
+                    compUnit.accept(threeAddrVisitor);
+                    String intermediateCode = threeAddrVisitor.getProgram().emit();
+                    System.out.println(intermediateCode);*/
+
                     LOGGER.info("Compilation done");
                 } catch (java.io.FileNotFoundException e) {
                     LOGGER.error("File not found : \"" + args[i] + "\"");

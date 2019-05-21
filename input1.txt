@@ -4,6 +4,7 @@ void main(){
 	{
 		struct j f;
 	}
+	x=0;
 	if(x >6){
 	}
 	int myArray[6];

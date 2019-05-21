@@ -1,13 +1,5 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package ast.definition;
 
-import ast.ASTNode;
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
 import ast.statement.Statement;
 
 /**
@@ -16,9 +8,5 @@ import ast.statement.Statement;
  */
 public abstract class Definition extends Statement{
 
-    @Override
-    public void accept(ASTVisitor visitor) throws ASTVisitorException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
     
 }

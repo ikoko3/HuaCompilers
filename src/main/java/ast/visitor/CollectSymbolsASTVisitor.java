@@ -40,8 +40,8 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        node.getExpression1().accept(this);
-        node.getExpression2().accept(this);
+        node.getTarget().accept(this);
+        node.getResult().accept(this);
         setProperties(node);
     }
 

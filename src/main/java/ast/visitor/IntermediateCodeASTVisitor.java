@@ -20,6 +20,8 @@ import ast.definition.Variable;
 import ast.definition.VariableDefinition;
 import ast.expression.*;
 import ast.statement.*;
+import core.Operator;
+
 import org.apache.commons.lang3.StringEscapeUtils;
 
 
@@ -45,55 +47,48 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(CompUnit node) throws ASTVisitorException {
-        for (Definition d : node.getDefinitions()) {
-            d.accept(this);
-        }
 
-        /*
-         Statement s = null, ps;
-        Iterator<Statement> it = node.getStatements().iterator();
-        while (it.hasNext()) {
-            ps = s;
-            s = it.next();
+        Definition d = null, pd;
+        Iterator<Definition> it = node.getDefinitions().iterator();
 
-            if (ps != null && !ASTUtils.getNextList(ps).isEmpty()) {
-                Program.backpatch(ASTUtils.getNextList(ps), program.addNewLabel());
-            }
+       while (it.hasNext()){
+           pd = d;
+           d = it.next();
+          
+           d.accept(this);
+           backpatchNextList(pd);
 
-            s.accept(this);
-
-            if (!ASTUtils.getBreakList(s).isEmpty()) {
-                ASTUtils.error(s, "Break detected without a loop.");
-            }
-
-            if (!ASTUtils.getContinueList(s).isEmpty()) {
-                ASTUtils.error(s, "Continue detected without a loop.");
-            }
-        }
-        if (s != null && !ASTUtils.getNextList(s).isEmpty()) {
-            Program.backpatch(ASTUtils.getNextList(s), program.addNewLabel());
-        }
-        */
+       }
+       backpatchNextList(d);
+    
     }
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        node.getExpression1().accept(this);
-        node.getExpression2().accept(this);
-        /*
-        node.getExpression().accept(this);
+        node.getTarget().accept(this);
         String t = stack.pop();
-        program.add(new AssignInstr(t, node.getIdentifier()));
-        */
+        node.getResult().accept(this);
+        String res = stack.pop();
+
+        program.add(new AssignInstr(t, res));
+        
 
     }
 
     
     @Override
     public void visit(BinaryExpression node) throws ASTVisitorException {
-        //If father is boolExpr, set this expression boolean
+        //Expression1
+        InheritBooleanAttributes(node,node.getExpression1());
         node.getExpression1().accept(this);
         String t1 = stack.pop();
+
+        LabelInstr intrmLbl = null;
+        if(node.getOperator().isLogical())
+        intrmLbl = program.addNewLabel();
+
+        //Expression2
+        InheritBooleanAttributes(node,node.getExpression2());
         node.getExpression2().accept(this);
         String t2 = stack.pop();
 
@@ -101,19 +96,24 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
             if (!node.getOperator().isRelational()) {
                 ASTUtils.error(node, "A not boolean expression used as boolean.");
             }
-            // if op == '&&' or op='||'
-            // &&:
-            //     create label anamesa se expr1 kai expr2
-            
-            //      false list tou expr1 -> falselist
-            //      true list tou expr1 -> Label(prin to expr2)
-            
-            //      false list tou expr2 -> falselist
-            //      true list tou expr2 -> true list
-            
-            // ||:
-            //    antistoixa me to && alla me prosoxi
-            
+            switch(node.getOperator()){
+                case AND:
+                    ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression1()));
+                    Program.backpatch(ASTUtils.getTrueList(node.getExpression1()),intrmLbl);
+
+                    ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
+                    ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
+                    break;
+                case OR:
+                    ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression1()));
+                    Program.backpatch(ASTUtils.getFalseList(node.getExpression1()),intrmLbl);
+
+                    ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
+                    ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
+                    break;
+                default:
+                    break;
+            }            
             
             CondJumpInstr condJumpInstr = new CondJumpInstr(node.getOperator(), t1, t2);
             program.add(condJumpInstr);
@@ -134,6 +134,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     @Override
     public void visit(UnaryExpression node) throws ASTVisitorException {
         //If father is boolExpr, set this expression boolean
+        InheritBooleanAttributes(node,node.getExpression());
         node.getExpression().accept(this);
         String t1 = stack.pop();
         String t = createTemp();
@@ -154,42 +155,20 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     @Override
     public void visit(FloatLiteralExpression node) throws ASTVisitorException {
         //TO DO: FLOAT CANNOT BE USED AS BOOLEAN EXPRESSIONS
-        if (ASTUtils.isBooleanExpression(node)) {
-            if (node.getLiteral() != 0d) {
-                GotoInstr i = new GotoInstr();
-                program.add(i);
-                ASTUtils.getTrueList(node).add(i);
-            } else {
-                GotoInstr i = new GotoInstr();
-                program.add(i);
-                ASTUtils.getFalseList(node).add(i);
-            }
-        } else {
             String t = createTemp();
             stack.push(t);
             program.add(new AssignInstr(node.getLiteral().toString(), t));
-        }
     }
 
     
     @Override
     public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
         //TO DO: INTEGERS CANNOT BE USED AS BOOLEAN EXPRESSIONS
-        if (ASTUtils.isBooleanExpression(node)) {
-            if (node.getLiteral() != 0) {
-                GotoInstr i = new GotoInstr();
-                program.add(i);
-                ASTUtils.getTrueList(node).add(i);
-            } else {
-                GotoInstr i = new GotoInstr();
-                program.add(i);
-                ASTUtils.getFalseList(node).add(i);
-            }
-        } else {
+
             String t = createTemp();
             stack.push(t);
             program.add(new AssignInstr(node.getLiteral().toString(), t));
-        }
+        
     }
     
     @Override
@@ -438,5 +417,15 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         System.out.println("");
     }
 
+    private void backpatchNextList(Statement s){
+        if(s != null && !ASTUtils.getNextList(s).isEmpty())
+            Program.backpatch(ASTUtils.getNextList(s), program.addNewLabel());
+    }
+
+    private void InheritBooleanAttributes(ASTNode parent, Expression node){
+        if(parent instanceof Expression && ASTUtils.isBooleanExpression((Expression)parent))
+            ASTUtils.setBooleanExpression(node, true);
+        
+    }
 
 }

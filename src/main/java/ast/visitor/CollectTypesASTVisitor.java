@@ -40,11 +40,11 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        node.getExpression1().accept(this);
-        node.getExpression2().accept(this);
+        node.getTarget().accept(this);
+        node.getResult().accept(this);
        
-        Type type1 = ASTUtils.getSafeType(node.getExpression1());
-        Type type2 = ASTUtils.getSafeType(node.getExpression2());
+        Type type1 = ASTUtils.getSafeType(node.getTarget());
+        Type type2 = ASTUtils.getSafeType(node.getResult());
 
         if(!TypeUtils.isAssignable(type1, type2))
             ASTUtils.error(node,"Cannot assign "+type2.getClassName()+" to "+type1.getClassName());

@@ -77,9 +77,9 @@ public class PrintASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        node.getExpression1().accept(this);
+        node.getTarget().accept(this);
         System.out.print(" = ");
-        node.getExpression2().accept(this);
+        node.getResult().accept(this);
         System.out.print(";");
         System.out.println("");
     }
