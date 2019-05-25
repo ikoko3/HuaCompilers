@@ -6,18 +6,14 @@ package ast.visitor;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
 import threeaddr.*;
 import ast.*;
-import ast.definition.Array;
-import ast.definition.Definition;
-import ast.definition.FunctionDefinition;
-import ast.definition.StructDefinition;
-import ast.definition.Variable;
-import ast.definition.VariableDefinition;
+import ast.definition.*;
 import ast.expression.*;
 import ast.statement.*;
 import core.Operator;
@@ -93,7 +89,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         String t2 = stack.pop();
 
         if (ASTUtils.isBooleanExpression(node)) {
-            if (!node.getOperator().isRelational()) {
+            if (!node.getOperator().isRelational() && !node.getOperator().isLogical()) {
                 ASTUtils.error(node, "A not boolean expression used as boolean.");
             }
             switch(node.getOperator()){
@@ -133,15 +129,17 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     
     @Override
     public void visit(UnaryExpression node) throws ASTVisitorException {
-        //If father is boolExpr, set this expression boolean
         InheritBooleanAttributes(node,node.getExpression());
         node.getExpression().accept(this);
         String t1 = stack.pop();
         String t = createTemp();
         stack.push(t);
-        
-        // if op == !  (NOT)
-        //      antimetathesi twn stoixeiwn tou false list me to true list
+
+        if(node.getOperator().equals(Operator.NOT)){
+            List<GotoInstr> tempList = ASTUtils.getFalseList(node);
+            ASTUtils.setFalseList(node, ASTUtils.getTrueList(node));
+            ASTUtils.setTrueList(node,tempList);
+        }
         
         program.add(new UnaryOpInstr(node.getOperator(), t1, t));
     }
@@ -295,41 +293,51 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Array node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         node.getType().accept(this);
         System.out.print(" "+ node.getName() +"[" +node.getLength()+ "]");
     }
 
     @Override
     public void visit(ParameterDeclaration node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         node.getVariable().accept(this);
     }
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         node.getType().accept(this);
-        System.out.print(" "+node.getName());
     }
 
     @Override
     public void visit(FunctionDefinition node) throws ASTVisitorException {
-        System.out.println("");
+        //TODO: Add 3 address code
+
+        LabelInstr funcLabel = new LabelInstr(node.getName());
+        program.add(funcLabel);
+
+
+
         node.getReturnType().accept(this);
-        System.out.print(" "+node.getName() + "(" );
         for(ParameterDeclaration p: node.getParameters()){
-            p.accept(this);
-            if(node.getParameters().indexOf(p) != node.getParameters().size()-1)
-                System.out.print(",");
+            //p.accept(this);
+            //String t = stack.pop();
+            //String t1 = createTemp();
+            //stack.push(t1);
         }
-        System.out.println(") {");
         for(Statement s: node.getStatements()){
             s.accept(this);
         }
-        System.out.println("}");
     }
 
     @Override
     public void visit(StructDefinition node) throws ASTVisitorException {
-        System.out.println("");
+        //TODO: Add 3 address code
+
         System.out.println("struct "+node.getName()+" {");
         for(VariableDefinition v: node.getVariables()){
              v.accept(this);
@@ -339,6 +347,8 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         System.out.print(node.getIdentifier()+"[");
         node.getIndex().accept(this);
         System.out.print("]");
@@ -346,11 +356,15 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(BooleanLiteralExpression node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         System.out.print(node.isExpression());
     }
 
     @Override
     public void visit(CharLiteralExpression node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         System.out.print("\'");
         System.out.print(node.getExpression());
         System.out.print("\'");
@@ -358,15 +372,25 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(FunctionCallExpression node) throws ASTVisitorException {
-        System.out.print(node.getIdentifier()+"(");
+
+        List<String> params = new ArrayList<String>();
         for(Expression e: node.getExpressions()){
             e.accept(this);
+            String param = stack.pop();
+            params.add(param);
+            stack.push(param);
         }
-        System.out.print(");");
+
+        for (String param : params) {
+            program.add(new ParamInstr(param));
+        }
+        program.add(new GotoInstr(new LabelInstr(node.getIdentifier())));
     }
 
     @Override
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         System.out.print(" ");
         node.getStruct().accept(this);
         System.out.print("."+node.getIdentifier()+"[");
@@ -376,6 +400,8 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         System.out.print(" ");
         node.getStruct().accept(this);
         System.out.print("."+node.getIdentifier());
@@ -383,12 +409,16 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(EmptyStatement node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         node.getExpression().accept(this);
         System.out.println(";");
     }
 
     @Override
     public void visit(ReturnStatement node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         System.out.print("return ");
         if(node.getExpression()!=null)
             node.getExpression().accept(this);
@@ -397,24 +427,19 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(TypeSpecifier node) throws ASTVisitorException {
-        /*if(node.getType()==TypeEnum.STRUCT){
-            System.out.print("struct "+node.getStuctId());
-        }else{
-            System.out.print(node.getType());
-        }*/
-        System.out.print(node.getType().getClassName());
+        //TODO: Add 3 address code
     }
     
     @Override
     public void visit(StructSpecifier node) throws ASTVisitorException {
-        System.out.print(node.getType());
+        //TODO: Add 3 address code
     }
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
+        //TODO: Add 3 address code
+
         node.getVariable().accept(this);
-        System.out.print(";");
-        System.out.println("");
     }
 
     private void backpatchNextList(Statement s){

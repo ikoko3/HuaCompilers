@@ -5,7 +5,7 @@ void main(){
 		struct j f;
 	}
 	x=0;
-	if(x >6){
+	if(!(x >6)){
 	}
 	int myArray[6];
 
@@ -44,6 +44,8 @@ struct struct1{
 };
 
 float myFunction(int x,int y){
+
+	
 	return y;
 }
 

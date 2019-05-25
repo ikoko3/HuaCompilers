@@ -85,7 +85,7 @@ public class TypeUtils {
             case MINUS:
                 return isNumber(type);
             case NOT:
-                return type.equals(Type.BOOLEAN);
+                return type.equals(Type.BOOLEAN_TYPE);
             default:
                 return false;
         }
