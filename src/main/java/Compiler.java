@@ -56,8 +56,8 @@ public class Compiler {
                     compUnit.accept(new CollectTypesASTVisitor());
                     
                     // print program
-                    LOGGER.info("Input:");
-                    compUnit.accept(new PrintASTVisitor());
+                    //LOGGER.info("Input:");
+                    //compUnit.accept(new PrintASTVisitor());
                     
                     // print 3-address code
                     LOGGER.info("3-address code:");

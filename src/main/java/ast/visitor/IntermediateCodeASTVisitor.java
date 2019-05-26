@@ -336,13 +336,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(StructDefinition node) throws ASTVisitorException {
-        //TODO: Add 3 address code
-
-        System.out.println("struct "+node.getName()+" {");
-        for(VariableDefinition v: node.getVariables()){
-             v.accept(this);
-        }
-        System.out.println("};");
+        // nothing
     }
 
     @Override
@@ -384,7 +378,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         for (String param : params) {
             program.add(new ParamInstr(param));
         }
-        program.add(new GotoInstr(new LabelInstr(node.getIdentifier())));
+        program.add(new FunctionCallInstr(node.getIdentifier(),node.getExpressions().size()));
     }
 
     @Override
