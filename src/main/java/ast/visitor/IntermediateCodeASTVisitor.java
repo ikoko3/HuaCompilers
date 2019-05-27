@@ -152,21 +152,25 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     
     @Override
     public void visit(FloatLiteralExpression node) throws ASTVisitorException {
-        //TO DO: FLOAT CANNOT BE USED AS BOOLEAN EXPRESSIONS
+        if (ASTUtils.isBooleanExpression(node)) {
+            ASTUtils.error(node, "Floats cannot be used as boolean expressions");
+        } else {
             String t = createTemp();
             stack.push(t);
             program.add(new AssignInstr(node.getLiteral().toString(), t));
+        }
     }
 
     
     @Override
     public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
-        //TO DO: INTEGERS CANNOT BE USED AS BOOLEAN EXPRESSIONS
-
+        if (ASTUtils.isBooleanExpression(node)) {
+            ASTUtils.error(node, "Integers cannot be used as boolean expressions");
+        } else {
             String t = createTemp();
             stack.push(t);
             program.add(new AssignInstr(node.getLiteral().toString(), t));
-        
+        }
     }
     
     @Override
@@ -350,18 +354,33 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(BooleanLiteralExpression node) throws ASTVisitorException {
-        //TODO: Add 3 address code
+            if (node.isExpression() == true) {
+                GotoInstr i = new GotoInstr();
+                program.add(i);
+                ASTUtils.getTrueList(node).add(i);
+            } else {
+                GotoInstr i = new GotoInstr();
+                program.add(i);
+                ASTUtils.getFalseList(node).add(i);
+            }
+        
 
-        System.out.print(node.isExpression());
+            String t = createTemp();
+            stack.push(t);
+            //program.add(new AssignInstr(node.isExpression(), t));
     }
 
     @Override
     public void visit(CharLiteralExpression node) throws ASTVisitorException {
-        //TODO: Add 3 address code
-
-        System.out.print("\'");
-        System.out.print(node.getExpression());
-        System.out.print("\'");
+        if (ASTUtils.isBooleanExpression(node)) {
+            ASTUtils.error(node, "Characters cannot be used as boolean expressions");
+        } else {
+            
+            String t = createTemp();
+            stack.push(t);
+            program.add(new AssignInstr("\'" + node.getExpression() + "\'", t));
+            
+        }
     }
 
     @Override
