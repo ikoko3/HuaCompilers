@@ -20,7 +20,6 @@ import core.Operator;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
-
 public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     private final Program program;
@@ -47,16 +46,16 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         Definition d = null, pd;
         Iterator<Definition> it = node.getDefinitions().iterator();
 
-       while (it.hasNext()){
-           pd = d;
-           d = it.next();
-          
-           d.accept(this);
-           backpatchNextList(pd);
+        while (it.hasNext()) {
+            pd = d;
+            d = it.next();
 
-       }
-       backpatchNextList(d);
-    
+            d.accept(this);
+            backpatchNextList(pd);
+
+        }
+        backpatchNextList(d);
+
     }
 
     @Override
@@ -67,24 +66,23 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         String res = stack.pop();
 
         program.add(new AssignInstr(t, res));
-        
 
     }
 
-    
     @Override
     public void visit(BinaryExpression node) throws ASTVisitorException {
         //Expression1
-        InheritBooleanAttributes(node,node.getExpression1());
+        InheritBooleanAttributes(node, node.getExpression1());
         node.getExpression1().accept(this);
         String t1 = stack.pop();
 
         LabelInstr intrmLbl = null;
-        if(node.getOperator().isLogical())
-        intrmLbl = program.addNewLabel();
+        if (node.getOperator().isLogical()) {
+            intrmLbl = program.addNewLabel();
+        }
 
         //Expression2
-        InheritBooleanAttributes(node,node.getExpression2());
+        InheritBooleanAttributes(node, node.getExpression2());
         node.getExpression2().accept(this);
         String t2 = stack.pop();
 
@@ -92,29 +90,29 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
             if (!node.getOperator().isRelational() && !node.getOperator().isLogical()) {
                 ASTUtils.error(node, "A not boolean expression used as boolean.");
             }
-            switch(node.getOperator()){
+            switch (node.getOperator()) {
                 case AND:
                     ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression1()));
-                    Program.backpatch(ASTUtils.getTrueList(node.getExpression1()),intrmLbl);
+                    Program.backpatch(ASTUtils.getTrueList(node.getExpression1()), intrmLbl);
 
                     ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
                     ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
                     break;
                 case OR:
                     ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression1()));
-                    Program.backpatch(ASTUtils.getFalseList(node.getExpression1()),intrmLbl);
+                    Program.backpatch(ASTUtils.getFalseList(node.getExpression1()), intrmLbl);
 
                     ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
                     ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
                     break;
                 default:
                     break;
-            }            
-            
+            }
+
             CondJumpInstr condJumpInstr = new CondJumpInstr(node.getOperator(), t1, t2);
             program.add(condJumpInstr);
             ASTUtils.getTrueList(node).add(condJumpInstr);
-            
+
             GotoInstr gotoInstr = new GotoInstr();
             program.add(gotoInstr);
             ASTUtils.getFalseList(node).add(gotoInstr);
@@ -122,68 +120,60 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         } else {
 
             String t = createTemp();
-            program.add(new BinaryOpInstr(node.getOperator(),t1,t2,t));
+            program.add(new BinaryOpInstr(node.getOperator(), t1, t2, t));
             stack.push(t);
         }
     }
-    
+
     @Override
     public void visit(UnaryExpression node) throws ASTVisitorException {
-        InheritBooleanAttributes(node,node.getExpression());
+        InheritBooleanAttributes(node, node.getExpression());
         node.getExpression().accept(this);
         String t1 = stack.pop();
         String t = createTemp();
         stack.push(t);
 
-        if(node.getOperator().equals(Operator.NOT)){
+        if (node.getOperator().equals(Operator.NOT)) {
             List<GotoInstr> tempList = ASTUtils.getFalseList(node);
             ASTUtils.setFalseList(node, ASTUtils.getTrueList(node));
-            ASTUtils.setTrueList(node,tempList);
+            ASTUtils.setTrueList(node, tempList);
         }
-        
+
         program.add(new UnaryOpInstr(node.getOperator(), t1, t));
     }
-    
+
     @Override
     public void visit(IdentifierExpression node) throws ASTVisitorException {
         stack.push(node.getIdentifier());
     }
 
-    
     @Override
     public void visit(FloatLiteralExpression node) throws ASTVisitorException {
-        if (ASTUtils.isBooleanExpression(node)) {
-            ASTUtils.error(node, "Floats cannot be used as boolean expressions");
-        } else {
-            String t = createTemp();
-            stack.push(t);
-            program.add(new AssignInstr(node.getLiteral().toString(), t));
-        }
+
+        String t = createTemp();
+        stack.push(t);
+        program.add(new AssignInstr(node.getLiteral().toString(), t));
+
     }
 
-    
     @Override
     public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
-        if (ASTUtils.isBooleanExpression(node)) {
-            ASTUtils.error(node, "Integers cannot be used as boolean expressions");
-        } else {
-            String t = createTemp();
-            stack.push(t);
-            program.add(new AssignInstr(node.getLiteral().toString(), t));
-        }
+
+        String t = createTemp();
+        stack.push(t);
+        program.add(new AssignInstr(node.getLiteral().toString(), t));
+
     }
-    
+
     @Override
     public void visit(StringLiteralExpression node) throws ASTVisitorException {
-        if (ASTUtils.isBooleanExpression(node)) {
-            ASTUtils.error(node, "Strings cannot be used as boolean expressions");
-        } else {
-            String t = createTemp();
-            stack.push(t);
-            program.add(new AssignInstr("\"" + StringEscapeUtils.escapeJava(node.getLiteral()) + "\"", t));
-        }
+
+        String t = createTemp();
+        stack.push(t);
+        program.add(new AssignInstr("\"" + StringEscapeUtils.escapeJava(node.getLiteral()) + "\"", t));
+
     }
-    
+
     @Override
     public void visit(ParenthesisExpression node) throws ASTVisitorException {
         node.getExpression().accept(this);
@@ -192,20 +182,20 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         stack.push(t);
         program.add(new AssignInstr(t1, t));
     }
-    
+
     @Override
     public void visit(WhileStatement node) throws ASTVisitorException {
         ASTUtils.setBooleanExpression(node.getExpression(), true);
-        
+
         LabelInstr beginLabel = program.addNewLabel();
         node.getExpression().accept(this);
         LabelInstr beginStmtLabel = program.addNewLabel();
         Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
-        
+
         node.getStatement().accept(this);
         Program.backpatch(ASTUtils.getNextList(node.getStatement()), beginLabel);
         Program.backpatch(ASTUtils.getContinueList(node.getStatement()), beginLabel);
-        
+
         program.add(new GotoInstr(beginLabel));
         ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
@@ -219,12 +209,12 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         LabelInstr beginStmtLabel = program.addNewLabel();
         Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
         node.getStatement().accept(this);
-        
+
         ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
-        
-        ASTUtils.setBreakList(node,ASTUtils.getBreakList(node.getStatement()));
-        ASTUtils.setContinueList(node,ASTUtils.getContinueList(node.getStatement()));
+
+        ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getStatement()));
+        ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getStatement()));
     }
 
     @Override
@@ -239,39 +229,39 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         node.getStatement().accept(this);
         GotoInstr gotoInstr = new GotoInstr();
         program.add(gotoInstr);
-        
+
         LabelInstr beginElseLabel = program.addNewLabel();
         Program.backpatch(ASTUtils.getFalseList(node.getExpression()), beginElseLabel);
-        
+
         ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getElseStatement()));
         ASTUtils.getNextList(node).add(gotoInstr);
-        
-        ASTUtils.setBreakList(node,ASTUtils.getBreakList(node.getStatement()));
-        ASTUtils.setBreakList(node,ASTUtils.getBreakList(node.getElseStatement()));
-        
-        ASTUtils.setContinueList(node,ASTUtils.getContinueList(node.getStatement()));
-        ASTUtils.setContinueList(node,ASTUtils.getContinueList(node.getElseStatement()));
+
+        ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getStatement()));
+        ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getElseStatement()));
+
+        ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getStatement()));
+        ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getElseStatement()));
     }
-    
+
     @Override
     public void visit(BreakStatement node) throws ASTVisitorException {
-        
+
         GotoInstr gotoInstr = new GotoInstr();
         program.add(gotoInstr);
         ASTUtils.getBreakList(node).add(gotoInstr);
-       
+
     }
 
     @Override
     public void visit(ContinueStatement node) throws ASTVisitorException {
-        
+
         GotoInstr gotoInstr = new GotoInstr();
         program.add(gotoInstr);
         ASTUtils.getContinueList(node).add(gotoInstr);
-        
+
     }
-    
+
     @Override
     public void visit(CompoundStatement node) throws ASTVisitorException {
         List<GotoInstr> breakList = new ArrayList<GotoInstr>();
@@ -300,7 +290,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         //TODO: Add 3 address code
 
         node.getType().accept(this);
-        System.out.print(" "+ node.getName() +"[" +node.getLength()+ "]");
+        System.out.print(" " + node.getName() + "[" + node.getLength() + "]");
     }
 
     @Override
@@ -324,16 +314,14 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         LabelInstr funcLabel = new LabelInstr(node.getName());
         program.add(funcLabel);
 
-
-
         node.getReturnType().accept(this);
-        for(ParameterDeclaration p: node.getParameters()){
+        for (ParameterDeclaration p : node.getParameters()) {
             //p.accept(this);
             //String t = stack.pop();
             //String t1 = createTemp();
             //stack.push(t1);
         }
-        for(Statement s: node.getStatements()){
+        for (Statement s : node.getStatements()) {
             s.accept(this);
         }
     }
@@ -347,27 +335,26 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         //TODO: Add 3 address code
 
-        System.out.print(node.getIdentifier()+"[");
+        System.out.print(node.getIdentifier() + "[");
         node.getIndex().accept(this);
         System.out.print("]");
     }
 
     @Override
     public void visit(BooleanLiteralExpression node) throws ASTVisitorException {
-            if (node.isExpression() == true) {
-                GotoInstr i = new GotoInstr();
-                program.add(i);
-                ASTUtils.getTrueList(node).add(i);
-            } else {
-                GotoInstr i = new GotoInstr();
-                program.add(i);
-                ASTUtils.getFalseList(node).add(i);
-            }
-        
+        if (node.isExpression() == true) {
+            GotoInstr i = new GotoInstr();
+            program.add(i);
+            ASTUtils.getTrueList(node).add(i);
+        } else {
+            GotoInstr i = new GotoInstr();
+            program.add(i);
+            ASTUtils.getFalseList(node).add(i);
+        }
 
-            String t = createTemp();
-            stack.push(t);
-            //program.add(new AssignInstr(node.isExpression(), t));
+        String t = createTemp();
+        stack.push(t);
+        //program.add(new AssignInstr(node.isExpression(), t));
     }
 
     @Override
@@ -375,11 +362,11 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         if (ASTUtils.isBooleanExpression(node)) {
             ASTUtils.error(node, "Characters cannot be used as boolean expressions");
         } else {
-            
+
             String t = createTemp();
             stack.push(t);
             program.add(new AssignInstr("\'" + node.getExpression() + "\'", t));
-            
+
         }
     }
 
@@ -387,7 +374,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     public void visit(FunctionCallExpression node) throws ASTVisitorException {
 
         List<String> params = new ArrayList<String>();
-        for(Expression e: node.getExpressions()){
+        for (Expression e : node.getExpressions()) {
             e.accept(this);
             String param = stack.pop();
             params.add(param);
@@ -397,7 +384,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         for (String param : params) {
             program.add(new ParamInstr(param));
         }
-        program.add(new FunctionCallInstr(node.getIdentifier(),node.getExpressions().size()));
+        program.add(new FunctionCallInstr(node.getIdentifier(), node.getExpressions().size()));
     }
 
     @Override
@@ -406,7 +393,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
         System.out.print(" ");
         node.getStruct().accept(this);
-        System.out.print("."+node.getIdentifier()+"[");
+        System.out.print("." + node.getIdentifier() + "[");
         node.getIndex().accept(this);
         System.out.print("]");
     }
@@ -417,7 +404,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
         System.out.print(" ");
         node.getStruct().accept(this);
-        System.out.print("."+node.getIdentifier());
+        System.out.print("." + node.getIdentifier());
     }
 
     @Override
@@ -430,19 +417,24 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(ReturnStatement node) throws ASTVisitorException {
-        //TODO: Add 3 address code
-
-        System.out.print("return ");
-        if(node.getExpression()!=null)
+        
+        ReturnInstr returnInstr = new ReturnInstr();
+        String t = createTemp();
+        
+        if (node.getExpression() != null) {
             node.getExpression().accept(this);
-        System.out.println(";");
+            String t1 = stack.pop();
+            program.add(new AssignInstr(t1, t));
+            returnInstr.setValue(t);
+        }
+        program.add(returnInstr);
     }
 
     @Override
     public void visit(TypeSpecifier node) throws ASTVisitorException {
         //TODO: Add 3 address code
     }
-    
+
     @Override
     public void visit(StructSpecifier node) throws ASTVisitorException {
         //TODO: Add 3 address code
@@ -455,15 +447,17 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         node.getVariable().accept(this);
     }
 
-    private void backpatchNextList(Statement s){
-        if(s != null && !ASTUtils.getNextList(s).isEmpty())
+    private void backpatchNextList(Statement s) {
+        if (s != null && !ASTUtils.getNextList(s).isEmpty()) {
             Program.backpatch(ASTUtils.getNextList(s), program.addNewLabel());
+        }
     }
 
-    private void InheritBooleanAttributes(ASTNode parent, Expression node){
-        if(parent instanceof Expression && ASTUtils.isBooleanExpression((Expression)parent))
+    private void InheritBooleanAttributes(ASTNode parent, Expression node) {
+        if (parent instanceof Expression && ASTUtils.isBooleanExpression((Expression) parent)) {
             ASTUtils.setBooleanExpression(node, true);
-        
+        }
+
     }
 
 }
