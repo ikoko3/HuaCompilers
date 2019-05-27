@@ -25,7 +25,6 @@ public class ReturnInstr implements Instruction{
         this.value = value;
     }
     
-    
     @Override
     public String emit() {
         if(value.isEmpty())
