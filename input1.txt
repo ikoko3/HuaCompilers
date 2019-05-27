@@ -25,10 +25,15 @@ void main(){
 	char str[5];
 	str = "test";
 
+	test();
+
 	char mychar;
-	mychar = '\n';
 	mychar = '\t';
 	mychar = '\0';
+
+	struct struct2 cat;
+
+	cat.tt = 3;
 }
 
 struct struct2{
@@ -44,8 +49,17 @@ struct struct1{
 };
 
 float myFunction(int x,int y){
-
-	
 	return y;
+}
+
+void test(){
+	return;
+}
+
+int sum(int i) {
+	if (i <= 0) {
+		return 0;
+	}
+	return i + sum(i-1);
 }
 

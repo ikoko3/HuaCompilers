@@ -27,7 +27,7 @@ public class ReturnInstr implements Instruction{
     
     @Override
     public String emit() {
-        if(value.isEmpty())
+        if(value == null)
             return "return";
         else
             return "return " + value;   

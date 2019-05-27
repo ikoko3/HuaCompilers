@@ -6,20 +6,12 @@ package threeaddr;
 
 public class AssignInstr implements Instruction {
 
-    private String arg1;
     private String result;
+    private String target;
 
-    public AssignInstr(String arg1, String result) {
-        this.arg1 = arg1;
+    public AssignInstr(String target, String result) {
         this.result = result;
-    }
-
-    public String getArg1() {
-        return arg1;
-    }
-
-    public void setArg1(String arg1) {
-        this.arg1 = arg1;
+        this.target = target;
     }
 
     public String getResult() {
@@ -30,9 +22,17 @@ public class AssignInstr implements Instruction {
         this.result = result;
     }
 
+    public String getTarget() {
+        return target;
+    }
+
+    public void setTarget(String target) {
+        this.target = target;
+    }
+
     @Override
     public String emit() {
-        return result + " = " + arg1;
+        return target + " = " + result;
     }
 
 }

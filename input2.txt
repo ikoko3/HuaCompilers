@@ -1,0 +1,14 @@
+struct complex {
+	float real;
+	float img;
+};
+
+void main() {
+	struct complex a;
+	a.real = 5;
+	a.img = 10;
+	print("Real part:");
+	print(a.real);
+	print("Imaginary part:");
+	print(a.img);
+}

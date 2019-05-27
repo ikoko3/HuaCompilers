@@ -7,6 +7,8 @@ package ast.expression;
 
 import ast.visitor.ASTVisitor;
 import ast.visitor.ASTVisitorException;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,13 +37,16 @@ public class FunctionCallExpression extends Expression{
     }
 
     public FunctionCallExpression() {
+        Expressions = new ArrayList<Expression>();
     }
 
     public FunctionCallExpression(String Identifier) {
+        this();
         this.Identifier = Identifier;
     }
 
     public FunctionCallExpression(String Identifier, List<Expression> Expressions) {
+        this();
         this.Identifier = Identifier;
         this.Expressions = Expressions;
     }

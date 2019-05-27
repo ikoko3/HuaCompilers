@@ -21,9 +21,20 @@ public class Registry {
     private String currentFunctionName;
     private boolean inWhileLoop;
 
+    private Map<String, String> definedStructs;
+
     private Registry() {
         root = null;
-        structs = new HashMap<String,SymTable>();
+        structs = new HashMap<String, SymTable>();
+        definedStructs = new HashMap<String,String>();
+    }
+
+    public Map<String, String> getDefinedStructs() {
+        return definedStructs;
+    }
+
+    public void setDefinedStructs(Map<String, String> definedStructs) {
+        this.definedStructs = definedStructs;
     }
 
     private static class SingletonHolder {
