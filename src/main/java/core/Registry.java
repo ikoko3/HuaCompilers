@@ -22,11 +22,13 @@ public class Registry {
     private boolean inWhileLoop;
 
     private Map<String, String> definedStructs;
-
+    private Map<String, String> definedArrays;
+    
     private Registry() {
         root = null;
         structs = new HashMap<String, SymTable>();
         definedStructs = new HashMap<String,String>();
+        definedArrays = new HashMap<String,String>();
     }
 
     public Map<String, String> getDefinedStructs() {
@@ -35,6 +37,14 @@ public class Registry {
 
     public void setDefinedStructs(Map<String, String> definedStructs) {
         this.definedStructs = definedStructs;
+    }
+
+    public Map<String, String> getDefinedArrays() {
+        return definedArrays;
+    }
+
+    public void setDefinedArrays(Map<String, String> definedArrays) {
+        this.definedArrays = definedArrays;
     }
 
     private static class SingletonHolder {

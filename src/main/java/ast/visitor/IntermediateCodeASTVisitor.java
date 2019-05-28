@@ -20,6 +20,7 @@ import core.Operator;
 import core.Registry;
 
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.objectweb.asm.Type;
 
 public class IntermediateCodeASTVisitor implements ASTVisitor {
 
@@ -197,10 +198,11 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         node.getStatement().accept(this);
         Program.backpatch(ASTUtils.getNextList(node.getStatement()), beginLabel);
         Program.backpatch(ASTUtils.getContinueList(node.getStatement()), beginLabel);
-
+        
         program.add(new GotoInstr(beginLabel));
         ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
+        
     }
 
     @Override
@@ -277,7 +279,8 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
             backpatchNextList(ps);
             s.accept(this);
-            
+            breakList.addAll(ASTUtils.getBreakList(s));
+            continueList.addAll(ASTUtils.getContinueList(s));
         }
         backpatchNextList(s);
 
@@ -292,20 +295,16 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(ParameterDeclaration node) throws ASTVisitorException {
-        //TODO: Add 3 address code
-
-        node.getVariable().accept(this);
+        node.getVariable().accept(this);       
     }
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
-
         node.getType().accept(this);
     }
 
     @Override
     public void visit(FunctionDefinition node) throws ASTVisitorException {
-        //TODO: Add 3 address code
 
         LabelInstr funcLabel = new LabelInstr(node.getName());
         program.add(funcLabel);
@@ -339,11 +338,17 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
-        //TODO: Add 3 address code
-
-        System.out.print(node.getIdentifier() + "[");
+        
+        String t = createTemp();
+        Type type = ASTUtils.getType(node);
+        String type_size = String.valueOf(type.getSize()*4);
         node.getIndex().accept(this);
-        System.out.print("]");
+        String i = stack.pop();
+        String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
+        arr = arr + "." + t;
+        
+        program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,i,t));
+        stack.push(arr);
     }
 
     @Override
@@ -389,10 +394,27 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
-        //TODO: Add 3 address code
-
         node.getStruct().accept(this);
+       
+        IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
+        String temp = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
+        temp = temp+"."+node.getIdentifier();
+        //We know from the previous visitor that the struct is valid.
+        
+        Type type = ASTUtils.getType(node);
+        String type_size = String.valueOf(type.getSize()*4);
         node.getIndex().accept(this);
+        String i = stack.pop();
+        String t = createTemp();
+        String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
+        arr = arr + "." + t; 
+        program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,i,t));
+        stack.push(arr);
+        
+        program.add(new AssignInstr(t, temp));
+        stack.push(temp); 
+        
+        
     }
 
     @Override
@@ -430,23 +452,26 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(TypeSpecifier node) throws ASTVisitorException {
-
+        // nothing
     }
 
     @Override
     public void visit(StructSpecifier node) throws ASTVisitorException {
-        
+        // nothing
     }
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
-        
-        
+              
         if(node.getVariable().getType() instanceof StructSpecifier){
             StructSpecifier sp = (StructSpecifier) node.getVariable().getType();
             String t= createTemp();
             program.add(new StructInitInstr(t,sp.getStuctId()));
             Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
+        }
+        if (node.getVariable() instanceof Array){
+            String t = createTemp();
+            Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
         }
     }
 
