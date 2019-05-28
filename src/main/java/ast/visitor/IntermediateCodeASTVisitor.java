@@ -26,16 +26,16 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     private final Program program;
     private final Deque<String> stack;
-    private int temp;
+    private int struct_var;
 
     public IntermediateCodeASTVisitor() {
         program = new Program();
         stack = new ArrayDeque<String>();
-        temp = 0;
+        struct_var = 0;
     }
 
     private String createTemp() {
-        return "t" + Integer.toString(temp++);
+        return "t" + Integer.toString(struct_var++);
     }
 
     public Program getProgram() {
@@ -137,9 +137,9 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         stack.push(t);
 
         if (node.getOperator().equals(Operator.NOT)) {
-            List<GotoInstr> tempList = ASTUtils.getFalseList(node);
+            List<GotoInstr> struct_varList = ASTUtils.getFalseList(node);
             ASTUtils.setFalseList(node, ASTUtils.getTrueList(node));
-            ASTUtils.setTrueList(node, tempList);
+            ASTUtils.setTrueList(node, struct_varList);
         }
 
         program.add(new UnaryOpInstr(node.getOperator(), t1, t));
@@ -353,19 +353,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(BooleanLiteralExpression node) throws ASTVisitorException {
-        // if (node.isExpression() == true) {
-        //     GotoInstr i = new GotoInstr();
-        //     program.add(i);
-        //     ASTUtils.getTrueList(node).add(i);
-        // } else {
-        //     GotoInstr i = new GotoInstr();
-        //     program.add(i);
-        //     ASTUtils.getFalseList(node).add(i);
-        // }
-
-        // String t = createTemp();
-        // stack.push(t);
-        // program.add(new AssignInstr(t,node.isExpression()));
+        
     }
 
     @Override
@@ -396,23 +384,32 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
         node.getStruct().accept(this);
        
-        IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-        String temp = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
-        temp = temp+"."+node.getIdentifier();
-        //We know from the previous visitor that the struct is valid.
-        
+        String struct_var;
+        if(node.getStruct() instanceof IdentifierExpression){
+            IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
+            struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
+        }else{
+            struct_var = stack.pop();
+        }
+        struct_var = struct_var+"."+node.getIdentifier();
+
         Type type = ASTUtils.getType(node);
         String type_size = String.valueOf(type.getSize()*4);
-        node.getIndex().accept(this);
-        String i = stack.pop();
-        String t = createTemp();
-        String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
-        arr = arr + "." + t; 
-        program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,i,t));
-        stack.push(arr);
+
         
-        program.add(new AssignInstr(t, temp));
-        stack.push(temp); 
+
+        node.getIndex().accept(this);
+        String index = stack.pop();
+        String address = createTemp();
+        program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,index,address));
+
+        String t1 = createTemp();
+        program.add(new AssignInstr(t1, struct_var));
+
+        String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
+        arr = t1 + "." + address; 
+
+        stack.push(arr); 
         
         
     }
@@ -422,13 +419,11 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         node.getStruct().accept(this);
        
         IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-        String temp = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
-        temp = temp+"."+node.getIdentifier();
+        String struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
+        struct_var = struct_var+"."+node.getIdentifier();
         //We know from the previous visitor that the struct is valid.
 
-        String t = createTemp();
-        program.add(new AssignInstr(t, temp));
-        stack.push(t);
+        stack.push(struct_var);
 
     }
 
