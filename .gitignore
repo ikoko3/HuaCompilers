@@ -6,3 +6,4 @@ dependency-reduced-pom.xml
 src/main/java/Lexer.java
 src/main/java/parser.java
 src/main/java/sym.java
+.vscode
