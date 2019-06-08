@@ -64,7 +64,7 @@ public class Compiler {
                     // print 3-address code
                     LOGGER.info("3-address code:");
                     IntermediateCodeASTVisitor threeAddrVisitor = new IntermediateCodeASTVisitor();
-                    //compUnit.accept(threeAddrVisitor);
+                    compUnit.accept(threeAddrVisitor);
                     String intermediateCode = threeAddrVisitor.getProgram().emit();
                     System.out.println(intermediateCode);
 

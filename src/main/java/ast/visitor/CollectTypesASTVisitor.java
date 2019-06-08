@@ -148,6 +148,9 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
+        if(TypeUtils.isStructType(node.getType())){
+            //search registry for struct with the given type if it exists.
+        }
         ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
@@ -331,6 +334,8 @@ public class CollectTypesASTVisitor implements ASTVisitor {
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
         node.getVariable().accept(this);
+        
+
         ASTUtils.setType(node,ASTUtils.getType(node.getVariable()));
     }
 

@@ -29,11 +29,21 @@ public class LocalIndexPool {
     }
 
     public int getLocalIndex(Type type) {
-        if (type.equals(Type.DOUBLE_TYPE)) {
-            return getDoubleLocalIndex();
-        } else if (type.equals(Type.INT_TYPE) || type.equals(TypeUtils.STRING_TYPE)) {
+        if ( type.equals(Type.INT_TYPE) 
+                || type.equals(TypeUtils.STRING_TYPE)
+                || type.equals(Type.FLOAT_TYPE)
+                || type.equals(Type.CHAR_TYPE)) {
             return getLocalIndex();
-        } else {
+        } else if(TypeUtils.isStructType(type)){
+
+            //handle stuct variable declaration here
+            //find struct fields from registry
+            //Call recursively getLocalIndex for all the fields.
+            //Count their size and reurn it.
+
+            return 0;
+        }
+        else {
             throw new IllegalArgumentException("Not supported type " + type);
         }
     }
@@ -63,20 +73,6 @@ public class LocalIndexPool {
 
     public void freeLocalIndex(int t) {
         used.remove(t);
-    }
-
-    public int getDoubleLocalIndex() {
-        for (int i = 0; i < max; i++) {
-            if (!used.contains(i) && !used.contains(i + 1)) {
-                used.add(i);
-                used.add(i + 1);
-                if (i + 1 > maxUsed) {
-                    maxUsed = i + 1;
-                }
-                return i;
-            }
-        }
-        throw new RuntimeException("Pool cannot contain more temporaries.");
     }
 
     public void freeDoubleLocalIndex(int t) {

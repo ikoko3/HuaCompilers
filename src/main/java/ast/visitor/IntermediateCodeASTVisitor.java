@@ -7,16 +7,17 @@ package ast.visitor;
 import ast.definition.ParameterDeclaration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
 import threeaddr.*;
+import types.TypeUtils;
 import ast.*;
 import ast.definition.*;
 import ast.expression.*;
 import ast.statement.*;
+import core.Environment;
 import core.Operator;
 import core.Registry;
 
@@ -448,16 +449,16 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
               
-        // if(node.getVariable().getType() instanceof StructSpecifier){
-        //     StructSpecifier sp = (StructSpecifier) node.getVariable().getType();
-        //     String t= createTemp();
-        //     program.add(new StructInitInstr(t,sp.getStuctId()));
-        //     Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
-        // }
-        // if (node.getVariable() instanceof Array){
-        //     String t = createTemp();
-        //     Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
-        // }
+        Type type = node.getVariable().getType();
+        if(TypeUtils.isStructType(type)){
+            String t= createTemp();
+            program.add(new StructInitInstr(t,TypeUtils.getStructId(type)));
+            Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
+        }
+        if (node.getVariable() instanceof Array){
+            String t = createTemp();
+            Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
+        }
     }
 
     private void backpatchNextList(Statement s) {

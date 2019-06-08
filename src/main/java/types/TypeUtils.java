@@ -1,6 +1,7 @@
 package types;
 
 import types.exception.*;
+import core.Environment;
 import core.Operator;
 import ast.definition.ParameterDeclaration;
 import java.util.List;
@@ -167,6 +168,17 @@ public class TypeUtils {
         }
         
         return types;
+    }
+
+    public static Boolean isStructType(Type type){
+        if(type.getDescriptor().contains((Environment.STRUCT_TYPE_PREFIX)))
+            return true;
+        return false;
+    }
+
+    public static String getStructId(Type type){
+        String id = type.getDescriptor().replace(Environment.STRUCT_TYPE_PREFIX,"");
+        return id;
     }
 
 }

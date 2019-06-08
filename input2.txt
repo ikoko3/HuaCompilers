@@ -1,10 +1,10 @@
-struct complex {
+struct struct12 {
 	float real;
 	float img;
 };
 
 void main() {
-	struct complex a;
+	struct tet a;
 	a.real = 5;
 	a.img = 10;
 	print("Real part:");

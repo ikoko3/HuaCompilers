@@ -172,7 +172,7 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
        }
         if(Registry.getInstance().getStructs().get(node.getName()) != null)
             ASTUtils.error(node, "Dublicate Struct declaration: "+node.getName());
-        
+           
        Registry.getInstance().getStructs().put(Environment.STRUCT_TYPE_PREFIX+node.getName(), ASTUtils.getSafeSymbolTable(node));
        setProperties(node);
     }
