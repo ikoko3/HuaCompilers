@@ -8,7 +8,7 @@ package ast.definition;
 import ast.ASTNode;
 import ast.visitor.ASTVisitor;
 import ast.visitor.ASTVisitorException;
-import ast.TypeSpecifier;
+import org.objectweb.asm.Type;
 
 /**
  *
@@ -16,31 +16,31 @@ import ast.TypeSpecifier;
  */
 public class Variable extends ASTNode{
 
-    private TypeSpecifier Type;
-    private String Name;
+    private Type type;
+    private String name;
 
-    public TypeSpecifier getType() {
-        return Type;
+    public Type getType() {
+        return type;
     }
 
-    public void setType(TypeSpecifier Type) {
-        this.Type = Type;
+    public void setType(Type type) {
+        this.type = type;
     }
 
     public String getName() {
-        return Name;
+        return name;
     }
 
-    public void setName(String Name) {
-        this.Name = Name;
+    public void setName(String name) {
+        this.name = name;
     }
     
     public Variable() {
     }
 
-    public Variable(TypeSpecifier Type, String Name) {
-        this.Type = Type;
-        this.Name = Name;
+    public Variable(Type Type, String Name) {
+        this.type = Type;
+        this.name = Name;
     }
 
 

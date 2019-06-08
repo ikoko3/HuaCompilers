@@ -7,7 +7,7 @@ package ast.definition;
 
 import ast.visitor.ASTVisitor;
 import ast.visitor.ASTVisitorException;
-import ast.TypeSpecifier;
+import org.objectweb.asm.Type;
 
 /**
  *
@@ -19,11 +19,11 @@ public class Array extends Variable{
     public Array() {
     }
 
-    public Array(TypeSpecifier Type, String identifier) {
+    public Array(Type Type, String identifier) {
         super(Type, identifier);
     }
 
-    public Array(int Length, TypeSpecifier Type, String identifier) {
+    public Array(int Length, Type Type, String identifier) {
         super(Type, identifier);
         this.Length = Length;
     }

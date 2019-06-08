@@ -6,14 +6,20 @@ public class SymTableEntry {
 
     private String id;
     private Type type;
+    private Integer index;
 
     public SymTableEntry(String id) {
-        this(id, null);
+        this(id, null, null);
+    }
+    
+    public SymTableEntry(String id, Type type) {
+        this(id, type, null);
     }
 
-    public SymTableEntry(String id, Type type) {
+    public SymTableEntry(String id, Type type, Integer index) {
         this.id = id;
         this.type = type;
+        this.index = index;
     }
 
     public String getId() {
@@ -30,6 +36,14 @@ public class SymTableEntry {
 
     public void setType(Type type) {
         this.type = type;
+    }
+
+    public Integer getIndex() {
+        return index;
+    }
+
+    public void setIndex(Integer index) {
+        this.index = index;
     }
 
     @Override

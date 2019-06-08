@@ -101,11 +101,9 @@ public class SymTableBuilderASTVisitor implements ASTVisitor {
     }
 
     
-
     @Override
     public void visit(Array node) throws ASTVisitorException {
         ASTUtils.setSymbolTable(node, stack.element());
-        node.getType().accept(this);
     }
 
     @Override
@@ -117,7 +115,6 @@ public class SymTableBuilderASTVisitor implements ASTVisitor {
     @Override
     public void visit(Variable node) throws ASTVisitorException {
         ASTUtils.setSymbolTable(node, stack.element());
-        node.getType().accept(this);
     }
 
     @Override
@@ -233,21 +230,11 @@ public class SymTableBuilderASTVisitor implements ASTVisitor {
     }
 
     @Override
-    public void visit(TypeSpecifier node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
-        
-    }
-
-    @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
         ASTUtils.setSymbolTable(node, stack.element());
         node.getVariable().accept(this);
     }
     
-    @Override
-    public void visit(StructSpecifier node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
-    }
 
     private void pushEnvironment() {
         SymTable<SymTableEntry> oldSymTable = stack.peek();

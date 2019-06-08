@@ -3,8 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package ast;
+package ast.definition;
 
+import ast.ASTNode;
 import ast.visitor.ASTVisitor;
 import ast.visitor.ASTVisitorException;
 import ast.definition.Variable;

@@ -97,7 +97,7 @@ non terminal List<Statement> StmtList;
 non terminal CompUnit CompUnit;
 non terminal Definition definition;
 non terminal List<Definition> definitionList;
-non terminal TypeSpecifier TypeSpecifier;
+non terminal Type TypeSpecifier;
 non terminal ParameterDeclaration ParameterDeclaration;
 non terminal List<ParameterDeclaration> ParameterList;
 non terminal FunctionDefinition FunctionDefinition;
@@ -161,39 +161,27 @@ definitionList ::= definition:d
 
 TypeSpecifier ::= CHAR:c
             {:
-                RESULT = new TypeSpecifier(Type.CHAR_TYPE);
-                RESULT.setLine(cleft);
-                RESULT.setColumn(cright);
+                RESULT = Type.CHAR_TYPE;
             :}
             | BOOL:b
             {:
-                RESULT = new TypeSpecifier(Type.BOOLEAN_TYPE);
-                RESULT.setLine(bleft);
-                RESULT.setColumn(bright);
+                RESULT = Type.BOOLEAN_TYPE;
             :}
             | INT:i
             {:
-                RESULT = new TypeSpecifier(Type.INT_TYPE);
-                RESULT.setLine(ileft);
-                RESULT.setColumn(iright);
+                RESULT = Type.INT_TYPE;
             :}            
             | FLOAT:f
             {:
-                RESULT = new TypeSpecifier(Type.FLOAT_TYPE);
-                RESULT.setLine(fleft);
-                RESULT.setColumn(fright);
+                RESULT = Type.FLOAT_TYPE;
             :}
             | VOID:v
             {:
-                RESULT = new TypeSpecifier(Type.VOID_TYPE);
-                RESULT.setLine(vleft);
-                RESULT.setColumn(vright);
+                RESULT = Type.VOID_TYPE;
             :}
             | STRUCT IDENTIFIER:id 
             {:
-                RESULT = new StructSpecifier(id,Type.getType(Environment.STRUCT_TYPE_PREFIX+id));
-                RESULT.setLine(idleft);
-                RESULT.setColumn(idright);
+                RESULT = Type.getType(Environment.STRUCT_TYPE_PREFIX+id);
             :}
             ;
 

@@ -7,7 +7,6 @@ package ast.definition;
 
 import ast.visitor.ASTVisitor;
 import ast.visitor.ASTVisitorException;
-import ast.TypeSpecifier;
 
 /**
  *

@@ -7,11 +7,11 @@ package ast.definition;
 
 import ast.visitor.ASTVisitor;
 import ast.visitor.ASTVisitorException;
-import ast.ParameterDeclaration;
 import ast.statement.Statement;
-import ast.TypeSpecifier;
 import java.lang.reflect.Parameter;
 import java.util.List;
+
+import org.objectweb.asm.Type;
 
 /**
  *
@@ -19,16 +19,16 @@ import java.util.List;
  */
 public class FunctionDefinition extends Definition{
 
-    private TypeSpecifier ReturnType;
+    private Type ReturnType;
     private String Name;
     private List<ParameterDeclaration> Parameters;
     private List<Statement> Statements;
 
-    public TypeSpecifier getReturnType() {
+    public Type getReturnType() {
         return ReturnType;
     }
 
-    public void setReturnType(TypeSpecifier ReturnType) {
+    public void setReturnType(Type ReturnType) {
         this.ReturnType = ReturnType;
     }
 
@@ -56,7 +56,7 @@ public class FunctionDefinition extends Definition{
         this.Statements = Statements;
     }
 
-    public FunctionDefinition(TypeSpecifier ReturnType, String Name, List<ParameterDeclaration> Parameters, List<Statement> Statements) {
+    public FunctionDefinition(Type ReturnType, String Name, List<ParameterDeclaration> Parameters, List<Statement> Statements) {
         this.ReturnType = ReturnType;
         this.Name = Name;
         this.Parameters = Parameters;

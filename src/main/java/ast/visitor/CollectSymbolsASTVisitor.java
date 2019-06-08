@@ -15,8 +15,7 @@ import ast.definition.*;
 import ast.*;
 import core.Environment;
 import org.objectweb.asm.Type;
-import symbol.SymTable;
-import symbol.SymTableEntry;
+import symbol.*;
 import types.TypeUtils;
 
 /**
@@ -105,7 +104,7 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
     @Override
     public void visit(Array node) throws ASTVisitorException {
         String varName = node.getName();
-        Type varType = Type.getType("["+node.getType().getType().getDescriptor());
+        Type varType = Type.getType("["+node.getType().getDescriptor());
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
         if(st.lookupOnlyInTop(varName) != null)
@@ -113,7 +112,6 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         
         st.put(varName, new SymTableEntry(varName,varType));
         
-        node.getType().accept(this);
         setProperties(node);
     }
 
@@ -126,15 +124,19 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
     @Override
     public void visit(Variable node) throws ASTVisitorException {
         String varName = node.getName();
-        Type varType = node.getType().getType();
+        Type varType = node.getType();
+
+        LocalIndexPool safeLocalIndexPool = ASTUtils.getSafeLocalIndexPool(node);
+        int localIndex = safeLocalIndexPool.getLocalIndex(node.getType());
+        
+        SymTableEntry entry = new SymTableEntry(varName,node.getType(),localIndex);
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
         if(st.lookupOnlyInTop(varName) != null)
             ASTUtils.error(node, "Dublicate variable declaration: "+varName);
         
-        st.put(varName, new SymTableEntry(varName,varType));
+        st.put(varName, entry);
         
-        node.getType().accept(this);
         setProperties(node);
     }
 
@@ -142,7 +144,7 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
     public void visit(FunctionDefinition node) throws ASTVisitorException {
         
         Type[] types = TypeUtils.getParameterTypesFor(node.getParameters());
-        Type functionType = Type.getMethodType(node.getReturnType().getType(),types);
+        Type functionType = Type.getMethodType(node.getReturnType(),types);
         ASTNode root = Registry.getInstance().getRoot();
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(root);
@@ -254,16 +256,6 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         if(node.getExpression()!=null)
             node.getExpression().accept(this);
         setProperties(node);
-    }
-
-    @Override
-    public void visit(TypeSpecifier node) throws ASTVisitorException {
-         setProperties(node);
-    }
-    
-     @Override
-    public void visit(StructSpecifier node) throws ASTVisitorException {
-         setProperties(node);
     }
 
     @Override

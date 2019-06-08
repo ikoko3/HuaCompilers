@@ -137,7 +137,6 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Array node) throws ASTVisitorException {
-        node.getType().accept(this);
         ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
@@ -149,15 +148,14 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
-        node.getType().accept(this);
-        ASTUtils.setType(node, ASTUtils.getSafeType(node.getType()));
+        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override
     public void visit(FunctionDefinition node) throws ASTVisitorException {
         
         Type[] types = TypeUtils.getParameterTypesFor(node.getParameters());
-        Type functionType = Type.getMethodType(node.getReturnType().getType(),types);
+        Type functionType = Type.getMethodType(node.getReturnType(),types);
         ASTNode root = Registry.getInstance().getRoot();
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(root);
@@ -328,16 +326,6 @@ public class CollectTypesASTVisitor implements ASTVisitor {
             ASTUtils.error(node,"The return type should be "+returnType.getClassName()+", and cannot be cast from "+exprType.getClassName());
         
         ASTUtils.setType(node,returnType);
-    }
-
-    @Override
-    public void visit(TypeSpecifier node) throws ASTVisitorException {
-        ASTUtils.setType(node, Type.VOID_TYPE);
-    }
-    
-     @Override
-    public void visit(StructSpecifier node) throws ASTVisitorException {
-        ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
     @Override

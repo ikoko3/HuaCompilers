@@ -2,7 +2,7 @@ package types;
 
 import types.exception.*;
 import core.Operator;
-import ast.ParameterDeclaration;
+import ast.definition.ParameterDeclaration;
 import java.util.List;
 import java.util.Set;
 import org.objectweb.asm.Type;
@@ -163,7 +163,7 @@ public class TypeUtils {
     public static Type[] getParameterTypesFor(List<ParameterDeclaration> params){
         Type[] types =new Type[params.size()];
         for(int i=0;i<params.size();i++){
-            types[i] = params.get(i).getVariable().getType().getType();
+            types[i] = params.get(i).getVariable().getType();
         }
         
         return types;

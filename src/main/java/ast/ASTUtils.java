@@ -5,8 +5,7 @@ import ast.expression.Expression;
 import ast.statement.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import symbol.SymTable;
-import symbol.SymTableEntry;
+import symbol.*;
 
 import org.objectweb.asm.Type;
 import threeaddr.GotoInstr;
@@ -14,6 +13,8 @@ import threeaddr.GotoInstr;
 public class ASTUtils {
 
     public static final String SYMTABLE_PROPERTY = "SYMTABLE_PROPERTY";
+    public static final String LOCAL_INDEX_POOL_PROPERTY = "LOCAL_INDEX_POOL_PROPERTY";
+
     public static final String IS_BOOLEAN_EXPR_PROPERTY = "IS_BOOLEAN_EXPR_PROPERTY";
     public static final String IS_NUMBER_EXPR_PROPERTY = "IS_NUMBER_EXPR_PROPERTY";
     public static final String TYPE_PROPERTY = "TYPE_PROPERTY";
@@ -60,6 +61,20 @@ public class ASTUtils {
 
     public static void setBooleanExpression(Expression node, boolean value) {
         node.setProperty(IS_BOOLEAN_EXPR_PROPERTY, value);
+    }
+
+    public static void setLocalIndexPool(ASTNode node, LocalIndexPool pool) {
+        node.setProperty(LOCAL_INDEX_POOL_PROPERTY, pool);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static LocalIndexPool getSafeLocalIndexPool(ASTNode node)
+            throws ASTVisitorException {
+        LocalIndexPool lip = (LocalIndexPool) node.getProperty(LOCAL_INDEX_POOL_PROPERTY);
+        if (lip == null) {
+            ASTUtils.error(node, "Local index pool not found.");
+        }
+        return lip;
     }
 
     public static Type getType(ASTNode node) {

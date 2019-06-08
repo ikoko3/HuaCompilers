@@ -4,6 +4,7 @@
  */
 package ast.visitor;
 
+import ast.definition.ParameterDeclaration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -290,7 +291,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Array node) throws ASTVisitorException {
-        node.getType().accept(this);
+
     }
 
     @Override
@@ -300,7 +301,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
-        node.getType().accept(this);
+
     }
 
     @Override
@@ -309,7 +310,6 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         LabelInstr funcLabel = new LabelInstr(node.getName());
         program.add(funcLabel);
 
-        node.getReturnType().accept(this);
         for (ParameterDeclaration p : node.getParameters()) {
             //p.accept(this);
             //String t = stack.pop();
@@ -446,28 +446,18 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     }
 
     @Override
-    public void visit(TypeSpecifier node) throws ASTVisitorException {
-        // nothing
-    }
-
-    @Override
-    public void visit(StructSpecifier node) throws ASTVisitorException {
-        // nothing
-    }
-
-    @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
               
-        if(node.getVariable().getType() instanceof StructSpecifier){
-            StructSpecifier sp = (StructSpecifier) node.getVariable().getType();
-            String t= createTemp();
-            program.add(new StructInitInstr(t,sp.getStuctId()));
-            Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
-        }
-        if (node.getVariable() instanceof Array){
-            String t = createTemp();
-            Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
-        }
+        // if(node.getVariable().getType() instanceof StructSpecifier){
+        //     StructSpecifier sp = (StructSpecifier) node.getVariable().getType();
+        //     String t= createTemp();
+        //     program.add(new StructInitInstr(t,sp.getStuctId()));
+        //     Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
+        // }
+        // if (node.getVariable() instanceof Array){
+        //     String t = createTemp();
+        //     Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
+        // }
     }
 
     private void backpatchNextList(Statement s) {

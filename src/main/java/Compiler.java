@@ -46,7 +46,10 @@ public class Compiler {
                     Registry.getInstance().setRoot(compUnit);
                     
                     // build symbol table
+                    LOGGER.debug("Building symbol table");
                     compUnit.accept(new SymTableBuilderASTVisitor());
+                    LOGGER.debug("Building local variables index");
+                    compUnit.accept(new LocalIndexBuilderASTVisitor());
 
                     //collect symbols
                     compUnit.accept(new CollectSymbolsASTVisitor());
@@ -61,7 +64,7 @@ public class Compiler {
                     // print 3-address code
                     LOGGER.info("3-address code:");
                     IntermediateCodeASTVisitor threeAddrVisitor = new IntermediateCodeASTVisitor();
-                    compUnit.accept(threeAddrVisitor);
+                    //compUnit.accept(threeAddrVisitor);
                     String intermediateCode = threeAddrVisitor.getProgram().emit();
                     System.out.println(intermediateCode);
 
