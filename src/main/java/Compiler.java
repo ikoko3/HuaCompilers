@@ -62,11 +62,16 @@ public class Compiler {
                     //compUnit.accept(new PrintASTVisitor());
                     
                     // print 3-address code
-                    LOGGER.info("3-address code:");
-                    IntermediateCodeASTVisitor threeAddrVisitor = new IntermediateCodeASTVisitor();
-                    compUnit.accept(threeAddrVisitor);
-                    String intermediateCode = threeAddrVisitor.getProgram().emit();
-                    System.out.println(intermediateCode);
+                    // LOGGER.info("3-address code:");
+                    // IntermediateCodeASTVisitor threeAddrVisitor = new IntermediateCodeASTVisitor();
+                    // compUnit.accept(threeAddrVisitor);
+                    // String intermediateCode = threeAddrVisitor.getProgram().emit();
+                    // System.out.println(intermediateCode);
+
+                    // convert to java bytecode
+                    LOGGER.info("Bytecode:");
+                    BytecodeGeneratorASTVisitor bytecodeVisitor = new BytecodeGeneratorASTVisitor();
+                    compUnit.accept(bytecodeVisitor);
 
                     LOGGER.info("Compilation done");
                 } catch (java.io.FileNotFoundException e) {

@@ -149,7 +149,9 @@ public class CollectTypesASTVisitor implements ASTVisitor {
     @Override
     public void visit(Variable node) throws ASTVisitorException {
         if(TypeUtils.isStructType(node.getType())){
-            //search registry for struct with the given type if it exists.
+            SymTable st = Registry.getInstance().getStructs().get(node.getType().getDescriptor());
+            if(st == null)
+                ASTUtils.error(node, "There is no struct "+TypeUtils.getStructId(node.getType()));
         }
         ASTUtils.setType(node, Type.VOID_TYPE);
     }

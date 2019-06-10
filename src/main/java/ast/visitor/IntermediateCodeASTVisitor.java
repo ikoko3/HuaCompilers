@@ -97,18 +97,18 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
             }
             switch (node.getOperator()) {
                 case AND:
-                    ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression1()));
-                    Program.backpatch(ASTUtils.getTrueList(node.getExpression1()), intrmLbl);
+                    ThreeAddrUtils.getFalseList(node).addAll(ThreeAddrUtils.getFalseList(node.getExpression1()));
+                    Program.backpatch(ThreeAddrUtils.getTrueList(node.getExpression1()), intrmLbl);
 
-                    ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
-                    ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
+                    ThreeAddrUtils.getFalseList(node).addAll(ThreeAddrUtils.getFalseList(node.getExpression2()));
+                    ThreeAddrUtils.getTrueList(node).addAll(ThreeAddrUtils.getTrueList(node.getExpression2()));
                     break;
                 case OR:
-                    ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression1()));
-                    Program.backpatch(ASTUtils.getFalseList(node.getExpression1()), intrmLbl);
+                    ThreeAddrUtils.getTrueList(node).addAll(ThreeAddrUtils.getTrueList(node.getExpression1()));
+                    Program.backpatch(ThreeAddrUtils.getFalseList(node.getExpression1()), intrmLbl);
 
-                    ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
-                    ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
+                    ThreeAddrUtils.getFalseList(node).addAll(ThreeAddrUtils.getFalseList(node.getExpression2()));
+                    ThreeAddrUtils.getTrueList(node).addAll(ThreeAddrUtils.getTrueList(node.getExpression2()));
                     break;
                 default:
                     break;
@@ -116,11 +116,11 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
             CondJumpInstr condJumpInstr = new CondJumpInstr(node.getOperator(), t1, t2);
             program.add(condJumpInstr);
-            ASTUtils.getTrueList(node).add(condJumpInstr);
+            ThreeAddrUtils.getTrueList(node).add(condJumpInstr);
 
             GotoInstr gotoInstr = new GotoInstr();
             program.add(gotoInstr);
-            ASTUtils.getFalseList(node).add(gotoInstr);
+            ThreeAddrUtils.getFalseList(node).add(gotoInstr);
 
         } else {
 
@@ -139,9 +139,9 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         stack.push(t);
 
         if (node.getOperator().equals(Operator.NOT)) {
-            List<GotoInstr> struct_varList = ASTUtils.getFalseList(node);
-            ASTUtils.setFalseList(node, ASTUtils.getTrueList(node));
-            ASTUtils.setTrueList(node, struct_varList);
+            List<GotoInstr> struct_varList = ThreeAddrUtils.getFalseList(node);
+            ThreeAddrUtils.setFalseList(node, ThreeAddrUtils.getTrueList(node));
+            ThreeAddrUtils.setTrueList(node, struct_varList);
         }
 
         program.add(new UnaryOpInstr(node.getOperator(), t1, t));
@@ -195,15 +195,15 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
         LabelInstr beginLabel = program.addNewLabel();
         node.getExpression().accept(this);
         LabelInstr beginStmtLabel = program.addNewLabel();
-        Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
+        Program.backpatch(ThreeAddrUtils.getTrueList(node.getExpression()), beginStmtLabel);
 
         node.getStatement().accept(this);
-        Program.backpatch(ASTUtils.getNextList(node.getStatement()), beginLabel);
-        Program.backpatch(ASTUtils.getContinueList(node.getStatement()), beginLabel);
+        Program.backpatch(ThreeAddrUtils.getNextList(node.getStatement()), beginLabel);
+        Program.backpatch(ThreeAddrUtils.getContinueList(node.getStatement()), beginLabel);
         
         program.add(new GotoInstr(beginLabel));
-        ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
-        ASTUtils.getNextList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
+        ThreeAddrUtils.getNextList(node).addAll(ThreeAddrUtils.getFalseList(node.getExpression()));
+        ThreeAddrUtils.getNextList(node).addAll(ThreeAddrUtils.getBreakList(node.getStatement()));
         
     }
 
@@ -213,14 +213,14 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
         node.getExpression().accept(this);
         LabelInstr beginStmtLabel = program.addNewLabel();
-        Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
+        Program.backpatch(ThreeAddrUtils.getTrueList(node.getExpression()), beginStmtLabel);
         node.getStatement().accept(this);
 
-        ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
-        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
+        ThreeAddrUtils.getNextList(node).addAll(ThreeAddrUtils.getFalseList(node.getExpression()));
+        ThreeAddrUtils.getNextList(node).addAll(ThreeAddrUtils.getNextList(node.getStatement()));
 
-        ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getStatement()));
-        ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getStatement()));
+        ThreeAddrUtils.setBreakList(node, ThreeAddrUtils.getBreakList(node.getStatement()));
+        ThreeAddrUtils.setContinueList(node, ThreeAddrUtils.getContinueList(node.getStatement()));
     }
 
     @Override
@@ -231,23 +231,23 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
         node.getExpression().accept(this);
         LabelInstr beginStmtLabel = program.addNewLabel();
-        Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
+        Program.backpatch(ThreeAddrUtils.getTrueList(node.getExpression()), beginStmtLabel);
         node.getStatement().accept(this);
         GotoInstr gotoInstr = new GotoInstr();
         program.add(gotoInstr);
 
         LabelInstr beginElseLabel = program.addNewLabel();
-        Program.backpatch(ASTUtils.getFalseList(node.getExpression()), beginElseLabel);
+        Program.backpatch(ThreeAddrUtils.getFalseList(node.getExpression()), beginElseLabel);
 
-        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
-        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getElseStatement()));
-        ASTUtils.getNextList(node).add(gotoInstr);
+        ThreeAddrUtils.getNextList(node).addAll(ThreeAddrUtils.getNextList(node.getStatement()));
+        ThreeAddrUtils.getNextList(node).addAll(ThreeAddrUtils.getNextList(node.getElseStatement()));
+        ThreeAddrUtils.getNextList(node).add(gotoInstr);
 
-        ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getStatement()));
-        ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getElseStatement()));
+        ThreeAddrUtils.setBreakList(node, ThreeAddrUtils.getBreakList(node.getStatement()));
+        ThreeAddrUtils.setBreakList(node, ThreeAddrUtils.getBreakList(node.getElseStatement()));
 
-        ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getStatement()));
-        ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getElseStatement()));
+        ThreeAddrUtils.setContinueList(node, ThreeAddrUtils.getContinueList(node.getStatement()));
+        ThreeAddrUtils.setContinueList(node, ThreeAddrUtils.getContinueList(node.getElseStatement()));
     }
 
     @Override
@@ -255,7 +255,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
         GotoInstr gotoInstr = new GotoInstr();
         program.add(gotoInstr);
-        ASTUtils.getBreakList(node).add(gotoInstr);
+        ThreeAddrUtils.getBreakList(node).add(gotoInstr);
 
     }
 
@@ -264,7 +264,7 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
         GotoInstr gotoInstr = new GotoInstr();
         program.add(gotoInstr);
-        ASTUtils.getContinueList(node).add(gotoInstr);
+        ThreeAddrUtils.getContinueList(node).add(gotoInstr);
 
     }
 
@@ -281,13 +281,13 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
             backpatchNextList(ps);
             s.accept(this);
-            breakList.addAll(ASTUtils.getBreakList(s));
-            continueList.addAll(ASTUtils.getContinueList(s));
+            breakList.addAll(ThreeAddrUtils.getBreakList(s));
+            continueList.addAll(ThreeAddrUtils.getContinueList(s));
         }
         backpatchNextList(s);
 
-        ASTUtils.setBreakList(node, breakList);
-        ASTUtils.setContinueList(node, continueList);
+        ThreeAddrUtils.setBreakList(node, breakList);
+        ThreeAddrUtils.setContinueList(node, continueList);
     }
 
     @Override
@@ -462,8 +462,8 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
     }
 
     private void backpatchNextList(Statement s) {
-        if (s != null && !ASTUtils.getNextList(s).isEmpty()) {
-            Program.backpatch(ASTUtils.getNextList(s), program.addNewLabel());
+        if (s != null && !ThreeAddrUtils.getNextList(s).isEmpty()) {
+            Program.backpatch(ThreeAddrUtils.getNextList(s), program.addNewLabel());
         }
     }
 

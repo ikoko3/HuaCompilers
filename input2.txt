@@ -1,10 +1,10 @@
-struct struct12 {
+struct test {
 	float real;
 	float img;
 };
 
 void main() {
-	struct tet a;
+	struct test a;
 	a.real = 5;
 	a.img = 10;
 	print("Real part:");
