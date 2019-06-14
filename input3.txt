@@ -7,11 +7,12 @@ int sum(int i) {
 
 
 void main() {
-	char msg[100];
 	int total;
-	total = sum(100);
 
-	print(msg);
+	int test;
+	total = sum(100);
+	test = 4;
+
 	print(total);
 	print('\n');
 

@@ -30,21 +30,21 @@ import org.objectweb.asm.tree.*;
 
 public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
-    private final Program program; //to remove
-    private final Deque<String> stack;//to remove
-    private int struct_var; //to remove
-
     private ClassNode cn;
     private MethodNode mn;
 
+    private final Deque<MethodNode> mnStack;
+
     public BytecodeGeneratorASTVisitor() {
-// create class
+        // create class
         cn = new ClassNode();
         cn.access = Opcodes.ACC_PUBLIC;
         cn.version = Opcodes.V1_5;
         cn.name = "test";
         cn.sourceFile = "test.in";
         cn.superName = "java/lang/Object";
+
+        mnStack = new ArrayDeque<MethodNode>() ;
 
         // create constructor
         //kainourgio method node gia kathe sinartisi
@@ -54,24 +54,12 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         mn.instructions.add(new InsnNode(Opcodes.RETURN));
         mn.maxLocals = 1;
         mn.maxStack = 1;
+        
         cn.methods.add(mn);
-
-        program = new Program(); //to remove
-        stack = new ArrayDeque<String>(); //to remove
-        struct_var = 0; //to remove
     }
     
     public ClassNode getClassNode() {
         return cn;
-    }
-
-
-    private String createTemp() { //to remove
-        return "t" + Integer.toString(struct_var++);
-    }
-
-    public Program getProgram() { //to remove
-        return program;
     }
 
     @Override
@@ -99,7 +87,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         // e.g. new ClassWriter(ClassWriter.COMPUTE_MAXS)
         mn.maxStack = 32;
 
-        cn.methods.add(mn);
         //Prepei gia kathe function na exoyme allo method node
     }
 
@@ -132,7 +119,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             
         widen(symEntry.getType(),exprType);
         
-        mn.instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
+        mnStack.element().instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
 
     }
 
@@ -212,22 +199,22 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(IdentifierExpression node) throws ASTVisitorException {
         SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
-        mn.instructions.add(new VarInsnNode((symEntry.getType().getOpcode(Opcodes.ILOAD)), symEntry.getIndex()));
+        mnStack.element().instructions.add(new VarInsnNode((symEntry.getType().getOpcode(Opcodes.ILOAD)), symEntry.getIndex()));
     }
 
     @Override
     public void visit(FloatLiteralExpression node) throws ASTVisitorException {
 
         Float d = node.getLiteral();
-        mn.instructions.add(new LdcInsnNode(d));
+        mnStack.element().instructions.add(new LdcInsnNode(d));
 
     }
 
     @Override
     public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
 
-        Double d = Double.valueOf(node.getLiteral());
-        mn.instructions.add(new LdcInsnNode(d));
+        int d = node.getLiteral();
+        mnStack.element().instructions.add(new LdcInsnNode(d));
 
     }
 
@@ -235,17 +222,17 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     public void visit(StringLiteralExpression node) throws ASTVisitorException {
 
         String str = node.getLiteral();
-        mn.instructions.add(new LdcInsnNode(str));
+        mnStack.element().instructions.add(new LdcInsnNode(str));
 
     }
 
     @Override
     public void visit(ParenthesisExpression node) throws ASTVisitorException {
         node.getExpression().accept(this);
-        String t1 = stack.pop();
-        String t = createTemp();
-        stack.push(t);
-        program.add(new AssignInstr(t1, t));
+        // String t1 = stack.pop();
+        // String t = createTemp();
+        // stack.push(t);
+        // program.add(new AssignInstr(t1, t));
     }
 
     @Override
@@ -253,12 +240,12 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         ASTUtils.setBooleanExpression(node.getExpression(), true);
 
         LabelNode beginLabelNode = new LabelNode();
-        mn.instructions.add(beginLabelNode);
+        mnStack.element().instructions.add(beginLabelNode);
 
         node.getExpression().accept(this);
 
         LabelNode trueLabelNode = new LabelNode();
-        mn.instructions.add(trueLabelNode);
+        mnStack.element().instructions.add(trueLabelNode);
         backpatch(ASTUtils.getTrueList(node.getExpression()), trueLabelNode);
 
         node.getStatement().accept(this);
@@ -266,7 +253,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         backpatch(ASTUtils.getNextList(node.getStatement()), beginLabelNode);
         backpatch(ASTUtils.getContinueList(node.getStatement()), beginLabelNode);
 
-        mn.instructions.add(new JumpInsnNode(Opcodes.GOTO, beginLabelNode));
+        mnStack.element().instructions.add(new JumpInsnNode(Opcodes.GOTO, beginLabelNode));
 
         ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
@@ -280,7 +267,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         node.getExpression().accept(this);
 
         LabelNode labelNode = new LabelNode();
-        mn.instructions.add(labelNode);
+        mnStack.element().instructions.add(labelNode);
         backpatch(ASTUtils.getTrueList(node.getExpression()), labelNode);
 
         node.getStatement().accept(this);
@@ -299,14 +286,14 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         node.getExpression().accept(this);
 
         LabelNode stmt1StartLabelNode = new LabelNode();
-        mn.instructions.add(stmt1StartLabelNode);
+        mnStack.element().instructions.add(stmt1StartLabelNode);
         node.getElseStatement().accept(this);
 
         JumpInsnNode skipGoto = new JumpInsnNode(Opcodes.GOTO, null);
-        mn.instructions.add(skipGoto);
+        mnStack.element().instructions.add(skipGoto);
 
         LabelNode stmt2StartLabelNode = new LabelNode();
-        mn.instructions.add(stmt2StartLabelNode);
+        mnStack.element().instructions.add(stmt2StartLabelNode);
         node.getElseStatement().accept(this);
 
         backpatch(ASTUtils.getTrueList(node.getExpression()), stmt1StartLabelNode);
@@ -380,9 +367,9 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(FunctionDefinition node) throws ASTVisitorException {
-
-        LabelInstr funcLabel = new LabelInstr(node.getName());
-        program.add(funcLabel);
+        SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
+        MethodNode fmn = new MethodNode(Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC, node.getName(),entry.getType().getDescriptor(), null, null);
+        mnStack.push(fmn);
 
         for (ParameterDeclaration p : node.getParameters()) {
             //p.accept(this);
@@ -403,6 +390,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             
         }
         backpatchNextList(s);
+        mnStack.pop();
+        cn.methods.add(fmn);
     }
 
     @Override
@@ -413,16 +402,16 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         
-        String t = createTemp();
-        Type type = ASTUtils.getType(node);
-        String type_size = String.valueOf(type.getSize()*4);
-        node.getIndex().accept(this);
-        String i = stack.pop();
-        String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
-        arr = arr + "." + t;
+        // String t = createTemp();
+        // Type type = ASTUtils.getType(node);
+        // String type_size = String.valueOf(type.getSize()*4);
+        // node.getIndex().accept(this);
+        // String i = stack.pop();
+        // String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
+        // arr = arr + "." + t;
         
-        program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,i,t));
-        stack.push(arr);
+        // program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,i,t));
+        // stack.push(arr);
     }
 
     @Override
@@ -432,72 +421,70 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(CharLiteralExpression node) throws ASTVisitorException {
-        String t = createTemp();
-        stack.push(t);
-        program.add(new AssignInstr(t,"\'" + node.getExpression() + "\'"));
+        // String t = createTemp();
+        // stack.push(t);
+        // program.add(new AssignInstr(t,"\'" + node.getExpression() + "\'"));
     }
 
     @Override
     public void visit(FunctionCallExpression node) throws ASTVisitorException {
 
-        List<String> params = new ArrayList<String>();
-        for (Expression e : node.getExpressions()) {
-            e.accept(this);
-            String param = stack.pop();
-            params.add(param);
-        }
+        // List<String> params = new ArrayList<String>();
+        // for (Expression e : node.getExpressions()) {
+        //     e.accept(this);
+        //     String param = stack.pop();
+        //     params.add(param);
+        // }
 
-        for (String param : params) {
-            program.add(new ParamInstr(param));
-            stack.push(param);
-        }
-        program.add(new FunctionCallInstr(node.getIdentifier(), node.getExpressions().size()));
+        // for (String param : params) {
+        //     program.add(new ParamInstr(param));
+        //     stack.push(param);
+        // }
+        // program.add(new FunctionCallInstr(node.getIdentifier(), node.getExpressions().size()));
     }
 
     @Override
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
-        node.getStruct().accept(this);
+        // node.getStruct().accept(this);
        
-        String struct_var;
-        if(node.getStruct() instanceof IdentifierExpression){
-            IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-            struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
-        }else{
-            struct_var = stack.pop();
-        }
-        struct_var = struct_var+"."+node.getIdentifier();
+        // String struct_var;
+        // if(node.getStruct() instanceof IdentifierExpression){
+        //     IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
+        //     struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
+        // }else{
+        //     struct_var = stack.pop();
+        // }
+        // struct_var = struct_var+"."+node.getIdentifier();
 
-        Type type = ASTUtils.getType(node);
-        String type_size = String.valueOf(type.getSize()*4);
+        // Type type = ASTUtils.getType(node);
+        // String type_size = String.valueOf(type.getSize()*4);
 
         
 
-        node.getIndex().accept(this);
-        String index = stack.pop();
-        String address = createTemp();
-        program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,index,address));
+        // node.getIndex().accept(this);
+        // String index = stack.pop();
+        // String address = createTemp();
+        // program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,index,address));
 
-        String t1 = createTemp();
-        program.add(new AssignInstr(t1, struct_var));
+        // String t1 = createTemp();
+        // program.add(new AssignInstr(t1, struct_var));
 
-        String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
-        arr = t1 + "." + address; 
+        // String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
+        // arr = t1 + "." + address; 
 
-        stack.push(arr); 
-        
-        
+        // stack.push(arr); 
     }
 
     @Override
     public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
-        node.getStruct().accept(this);
+        // node.getStruct().accept(this);
        
-        IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-        String struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
-        struct_var = struct_var+"."+node.getIdentifier();
-        //We know from the previous visitor that the struct is valid.
+        // IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
+        // String struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
+        // struct_var = struct_var+"."+node.getIdentifier();
+        // //We know from the previous visitor that the struct is valid.
 
-        stack.push(struct_var);
+        // stack.push(struct_var);
 
     }
 
@@ -509,45 +496,39 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(ReturnStatement node) throws ASTVisitorException {
         
-        ReturnInstr returnInstr = new ReturnInstr();
+        // ReturnInstr returnInstr = new ReturnInstr();
         
-        if (node.getExpression() != null) {
-            node.getExpression().accept(this);
-            String t = stack.pop();
-            returnInstr.setValue(t);
-        }
-        program.add(returnInstr);
+        // if (node.getExpression() != null) {
+        //     node.getExpression().accept(this);
+        //     String t = stack.pop();
+        //     returnInstr.setValue(t);
+        // }
+        // program.add(returnInstr);
     }
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
               
-        Type type = node.getVariable().getType();
-        if(TypeUtils.isStructType(type)){
-            String t= createTemp();
-            program.add(new StructInitInstr(t,TypeUtils.getStructId(type)));
-            Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
-        }
-        if (node.getVariable() instanceof Array){
-            String t = createTemp();
-            Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
-        }
+        // Type type = node.getVariable().getType();
+        // if(TypeUtils.isStructType(type)){
+        //     String t= createTemp();
+        //     program.add(new StructInitInstr(t,TypeUtils.getStructId(type)));
+        //     Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
+        // }
+        // if (node.getVariable() instanceof Array){
+        //     String t = createTemp();
+        //     Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
+        // }
     }
 
     private void backpatchNextList(Statement s) {
         if (s != null && !ASTUtils.getNextList(s).isEmpty()) {
             LabelNode labelNode = new LabelNode();
-            mn.instructions.add(labelNode);
+            mnStack.element().instructions.add(labelNode);
             backpatch(ASTUtils.getNextList(s), labelNode);
         }
     }
 
-    private void InheritBooleanAttributes(ASTNode parent, Expression node) {
-        if (parent instanceof Expression && ASTUtils.isBooleanExpression((Expression) parent)) {
-            ASTUtils.setBooleanExpression(node, true);
-        }
-
-    }
 
     private void backpatch(List<JumpInsnNode> list, LabelNode labelNode) {
         if (list == null) {
@@ -570,19 +551,19 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             if (target.equals(Type.INT_TYPE)) {
                 // nothing
             } else if (target.equals(Type.DOUBLE_TYPE)) {
-                mn.instructions.add(new InsnNode(Opcodes.I2D));
+                mnStack.element().instructions.add(new InsnNode(Opcodes.I2D));
             } else if (target.equals(TypeUtils.STRING_TYPE)) {
-                mn.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Boolean", "toString", "(Z)Ljava/lang/String;"));
+                mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Boolean", "toString", "(Z)Ljava/lang/String;"));
             }
         } else if (source.equals(Type.INT_TYPE)) {
             if (target.equals(Type.DOUBLE_TYPE)) {
-                mn.instructions.add(new InsnNode(Opcodes.I2D));
+                mnStack.element().instructions.add(new InsnNode(Opcodes.I2D));
             } else if (target.equals(TypeUtils.STRING_TYPE)) {
-                mn.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Integer", "toString", "(I)Ljava/lang/String;"));
+                mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Integer", "toString", "(I)Ljava/lang/String;"));
             }
         } else if (source.equals(Type.DOUBLE_TYPE)) {
             if (target.equals(TypeUtils.STRING_TYPE)) {
-                mn.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Double", "toString", "(D)Ljava/lang/String;"));
+                mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Double", "toString", "(D)Ljava/lang/String;"));
             }
         }
     }
@@ -591,9 +572,9 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         List<JumpInsnNode> trueList = new ArrayList<JumpInsnNode>();
 
         if (type.equals(TypeUtils.STRING_TYPE)) {
-            mn.instructions.add(new InsnNode(Opcodes.SWAP));
+            mnStack.element().instructions.add(new InsnNode(Opcodes.SWAP));
             JumpInsnNode jmp = null;
-            mn.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
             switch (op) {
                 case EQUAL:
                     jmp = new JumpInsnNode(Opcodes.IFNE, null);
@@ -605,36 +586,36 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
                     ASTUtils.error(node, "Operator not supported on strings");
                     break;
             }
-            mn.instructions.add(jmp);
+            mnStack.element().instructions.add(jmp);
             trueList.add(jmp);
         } else if (type.equals(Type.DOUBLE_TYPE)) {
             
-            mn.instructions.add(new InsnNode(Opcodes.DCMPG));
+            mnStack.element().instructions.add(new InsnNode(Opcodes.DCMPG));
             JumpInsnNode jmp = null;
                 switch (op) {
                     case EQUAL:
                         jmp = new JumpInsnNode(Opcodes.IFEQ, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case NOT_EQUAL:
                         jmp = new JumpInsnNode(Opcodes.IFNE, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case GREATER:
                         jmp = new JumpInsnNode(Opcodes.IFGT, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case GREATER_EQ:
                         jmp = new JumpInsnNode(Opcodes.IFGE, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case LESS:
                         jmp = new JumpInsnNode(Opcodes.IFLT, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case LESS_EQ:
                         jmp = new JumpInsnNode(Opcodes.IFLE, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     default:
                         ASTUtils.error(node, "Operator not supported");
@@ -647,27 +628,27 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             switch (op) {
                 case EQUAL:
                     jmp = new JumpInsnNode(Opcodes.IF_ICMPEQ, null);
-                    mn.instructions.add(jmp);
+                    mnStack.element().instructions.add(jmp);
                     break;
                 case NOT_EQUAL:
                     jmp = new JumpInsnNode(Opcodes.IF_ICMPNE, null);
-                    mn.instructions.add(jmp);
+                    mnStack.element().instructions.add(jmp);
                     break;
                 case GREATER:
                     jmp = new JumpInsnNode(Opcodes.IF_ICMPGT, null);
-                    mn.instructions.add(jmp);
+                    mnStack.element().instructions.add(jmp);
                     break;
                 case GREATER_EQ:
                     jmp = new JumpInsnNode(Opcodes.IF_ICMPGE, null);
-                    mn.instructions.add(jmp);
+                    mnStack.element().instructions.add(jmp);
                     break;
                 case LESS:
                     jmp = new JumpInsnNode(Opcodes.IF_ICMPLT, null);
-                    mn.instructions.add(jmp);
+                    mnStack.element().instructions.add(jmp);
                     break;
                 case LESS_EQ:
                     jmp = new JumpInsnNode(Opcodes.IF_ICMPLE, null);
-                    mn.instructions.add(jmp);
+                    mnStack.element().instructions.add(jmp);
                     break;
                 default:
                     ASTUtils.error(node, "Operator not supported");
@@ -678,7 +659,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         ASTUtils.setTrueList(node, trueList);
         List<JumpInsnNode> falseList = new ArrayList<JumpInsnNode>();
         JumpInsnNode jmp = new JumpInsnNode(Opcodes.GOTO, null);
-        mn.instructions.add(jmp);
+        mnStack.element().instructions.add(jmp);
         falseList.add(jmp);
         ASTUtils.setFalseList(node, falseList);
     }
@@ -688,35 +669,35 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
      */
     private void handleStringOperator(ASTNode node, Operator op) throws ASTVisitorException {
         if (op.equals(Operator.PLUS)) {
-            mn.instructions.add(new TypeInsnNode(Opcodes.NEW, "java/lang/StringBuilder"));
-            mn.instructions.add(new InsnNode(Opcodes.DUP));
-            mn.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V"));
-            mn.instructions.add(new InsnNode(Opcodes.SWAP));
-            mn.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;"));
-            mn.instructions.add(new InsnNode(Opcodes.SWAP));
-            mn.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;"));
-            mn.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;"));
+            mnStack.element().instructions.add(new TypeInsnNode(Opcodes.NEW, "java/lang/StringBuilder"));
+            mnStack.element().instructions.add(new InsnNode(Opcodes.DUP));
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V"));
+            mnStack.element().instructions.add(new InsnNode(Opcodes.SWAP));
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;"));
+            mnStack.element().instructions.add(new InsnNode(Opcodes.SWAP));
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;"));
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;"));
         } else if (op.isRelational()) {
             LabelNode trueLabelNode = new LabelNode();
             switch (op) {
                 case EQUAL:
-                    mn.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
-                    mn.instructions.add(new JumpInsnNode(Opcodes.IFNE, trueLabelNode));
+                    mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
+                    mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IFNE, trueLabelNode));
                     break;
                 case NOT_EQUAL:
-                    mn.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
-                    mn.instructions.add(new JumpInsnNode(Opcodes.IFEQ, trueLabelNode));
+                    mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
+                    mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IFEQ, trueLabelNode));
                     break;
                 default:
                     ASTUtils.error(node, "Operator not supported on strings");
                     break;
             }
-            mn.instructions.add(new InsnNode(Opcodes.ICONST_0));
+            mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_0));
             LabelNode endLabelNode = new LabelNode();
-            mn.instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
-            mn.instructions.add(trueLabelNode);
-            mn.instructions.add(new InsnNode(Opcodes.ICONST_1));
-            mn.instructions.add(endLabelNode);
+            mnStack.element().instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
+            mnStack.element().instructions.add(trueLabelNode);
+            mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_1));
+            mnStack.element().instructions.add(endLabelNode);
         } else {
             ASTUtils.error(node, "Operator not recognized");
         }
@@ -725,88 +706,88 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     private void handleNumberOperator(ASTNode node, Operator op, Type type) throws ASTVisitorException {
         if (op.equals(Operator.PLUS)) {
             
-            mn.instructions.add(new InsnNode(type.getOpcode(Opcodes.IADD)));
+            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IADD)));
         } else if (op.equals(Operator.MINUS)) {
             
-            mn.instructions.add(new InsnNode(type.getOpcode(Opcodes.ISUB)));
+            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.ISUB)));
         } else if (op.equals(Operator.MULTIPLY)) {
             
-            mn.instructions.add(new InsnNode(type.getOpcode(Opcodes.IMUL)));
+            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IMUL)));
         } else if (op.equals(Operator.DIVISION)) {
             
-            mn.instructions.add(new InsnNode(type.getOpcode(Opcodes.IDIV)));
+            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IDIV)));
         } else if (op.isRelational()) {
             
             if (type.equals(Type.DOUBLE_TYPE)) {
-                mn.instructions.add(new InsnNode(Opcodes.DCMPG));
+                mnStack.element().instructions.add(new InsnNode(Opcodes.DCMPG));
                 JumpInsnNode jmp = null;
                 switch (op) {
                     case EQUAL:
                         jmp = new JumpInsnNode(Opcodes.IFEQ, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case NOT_EQUAL:
                         jmp = new JumpInsnNode(Opcodes.IFNE, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case GREATER:
                         jmp = new JumpInsnNode(Opcodes.IFGT, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case GREATER_EQ:
                         jmp = new JumpInsnNode(Opcodes.IFGE, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case LESS:
                         jmp = new JumpInsnNode(Opcodes.IFLT, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     case LESS_EQ:
                         jmp = new JumpInsnNode(Opcodes.IFLE, null);
-                        mn.instructions.add(jmp);
+                        mnStack.element().instructions.add(jmp);
                         break;
                     default:
                         ASTUtils.error(node, "Operator not supported");
                         break;
                 }
-                mn.instructions.add(new InsnNode(Opcodes.ICONST_0));
+                mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_0));
                 LabelNode endLabelNode = new LabelNode();
-                mn.instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
+                mnStack.element().instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
                 LabelNode trueLabelNode = new LabelNode();
                 jmp.label = trueLabelNode;
-                mn.instructions.add(trueLabelNode);
-                mn.instructions.add(new InsnNode(Opcodes.ICONST_1));
-                mn.instructions.add(endLabelNode);
+                mnStack.element().instructions.add(trueLabelNode);
+                mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_1));
+                mnStack.element().instructions.add(endLabelNode);
             } else if (type.equals(Type.INT_TYPE)) {
                 LabelNode trueLabelNode = new LabelNode();
                 switch (op) {
                     case EQUAL:
-                        mn.instructions.add(new JumpInsnNode(Opcodes.IF_ICMPEQ, trueLabelNode));
+                        mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPEQ, trueLabelNode));
                         break;
                     case NOT_EQUAL:
-                        mn.instructions.add(new JumpInsnNode(Opcodes.IF_ICMPNE, trueLabelNode));
+                        mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPNE, trueLabelNode));
                         break;
                     case GREATER:
-                        mn.instructions.add(new JumpInsnNode(Opcodes.IF_ICMPGT, trueLabelNode));
+                        mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPGT, trueLabelNode));
                         break;
                     case GREATER_EQ:
-                        mn.instructions.add(new JumpInsnNode(Opcodes.IF_ICMPGE, trueLabelNode));
+                        mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPGE, trueLabelNode));
                         break;
                     case LESS:
-                        mn.instructions.add(new JumpInsnNode(Opcodes.IF_ICMPLT, trueLabelNode));
+                        mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPLT, trueLabelNode));
                         break;
                     case LESS_EQ:
-                        mn.instructions.add(new JumpInsnNode(Opcodes.IF_ICMPLE, trueLabelNode));
+                        mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPLE, trueLabelNode));
                         break;
                     default:
                         break;
                 }
-                mn.instructions.add(new InsnNode(Opcodes.ICONST_0));
+                mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_0));
                 LabelNode endLabelNode = new LabelNode();
-                mn.instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
-                mn.instructions.add(trueLabelNode);
-                mn.instructions.add(new InsnNode(Opcodes.ICONST_1));
-                mn.instructions.add(endLabelNode);
+                mnStack.element().instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
+                mnStack.element().instructions.add(trueLabelNode);
+                mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_1));
+                mnStack.element().instructions.add(endLabelNode);
             } else {
                 ASTUtils.error(node, "Cannot compare such types.");
             }

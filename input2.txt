@@ -11,4 +11,6 @@ void main() {
 	print(a.real);
 	print("Imaginary part:");
 	print(a.img);
+	int x;
+	x =4;
 }

@@ -2,6 +2,13 @@
 import core.Registry;
 import ast.visitor.*;
 import ast.ASTNode;
+import core.ReloadingClassLoader;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
+import java.lang.reflect.Method;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.util.TraceClassVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,12 +75,42 @@ public class Compiler {
                     // String intermediateCode = threeAddrVisitor.getProgram().emit();
                     // System.out.println(intermediateCode);
 
+
                     // convert to java bytecode
                     LOGGER.info("Bytecode:");
                     BytecodeGeneratorASTVisitor bytecodeVisitor = new BytecodeGeneratorASTVisitor();
                     compUnit.accept(bytecodeVisitor);
+                    ClassNode cn = bytecodeVisitor.getClassNode();
+                    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS + ClassWriter.COMPUTE_FRAMES);
+                    TraceClassVisitor cv = new TraceClassVisitor(cw, new PrintWriter(System.out));
+                    cn.accept(cv);
+                    // get code
+                    byte code[] = cw.toByteArray();
+                    
+                    String outputName = "test";
+                    String outputExtension = ".class";
 
+                    // update to file
+                    LOGGER.info("Writing class to file "+outputName+outputExtension);
+                    FileOutputStream fos = new FileOutputStream(outputName+outputExtension);
+                    fos.write(code);
+                    fos.close();
                     LOGGER.info("Compilation done");
+
+                    // instantiate class
+                    
+                    // LOGGER.info("Loading class "+outputName+outputExtension);
+                    // ReloadingClassLoader rcl = new ReloadingClassLoader(ClassLoader.getSystemClassLoader());
+                    // rcl.register(outputName, code);
+                    // Class<?> calculatorClass = rcl.loadClass(outputName);
+
+                    // run main method
+                    // Method meth = calculatorClass.getMethod("main", String[].class);
+                    // String[] params = null;
+                    // LOGGER.info("Executing");
+                    // meth.invoke(null, (Object) params);
+
+                    // LOGGER.info("Finished execution");
                 } catch (java.io.FileNotFoundException e) {
                     LOGGER.error("File not found : \"" + args[i] + "\"");
                 } catch (java.io.IOException e) {
