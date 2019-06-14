@@ -218,27 +218,24 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(FloatLiteralExpression node) throws ASTVisitorException {
 
-        String t = createTemp();
-        stack.push(t);
-        program.add(new AssignInstr(t,node.getLiteral().toString()));
+        Float d = node.getLiteral();
+        mn.instructions.add(new LdcInsnNode(d));
 
     }
 
     @Override
     public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
 
-        String t = createTemp();
-        stack.push(t);
-        program.add(new AssignInstr(t,node.getLiteral().toString()));
+        Double d = Double.valueOf(node.getLiteral());
+        mn.instructions.add(new LdcInsnNode(d));
 
     }
 
     @Override
     public void visit(StringLiteralExpression node) throws ASTVisitorException {
 
-        String t = createTemp();
-        stack.push(t);
-        program.add(new AssignInstr(t,"\"" + StringEscapeUtils.escapeJava(node.getLiteral()) + "\""));
+        String str = node.getLiteral();
+        mn.instructions.add(new LdcInsnNode(str));
 
     }
 
@@ -253,64 +250,77 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(WhileStatement node) throws ASTVisitorException {
-        // ASTUtils.setBooleanExpression(node.getExpression(), true);
+        ASTUtils.setBooleanExpression(node.getExpression(), true);
 
-        // LabelInstr beginLabel = program.addNewLabel();
-        // node.getExpression().accept(this);
-        // LabelInstr beginStmtLabel = program.addNewLabel();
-        // Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
+        LabelNode beginLabelNode = new LabelNode();
+        mn.instructions.add(beginLabelNode);
 
-        // node.getStatement().accept(this);
-        // Program.backpatch(ASTUtils.getNextList(node.getStatement()), beginLabel);
-        // Program.backpatch(ASTUtils.getContinueList(node.getStatement()), beginLabel);
-        
-        // program.add(new GotoInstr(beginLabel));
-        // ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
-        // ASTUtils.getNextList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
+        node.getExpression().accept(this);
+
+        LabelNode trueLabelNode = new LabelNode();
+        mn.instructions.add(trueLabelNode);
+        backpatch(ASTUtils.getTrueList(node.getExpression()), trueLabelNode);
+
+        node.getStatement().accept(this);
+
+        backpatch(ASTUtils.getNextList(node.getStatement()), beginLabelNode);
+        backpatch(ASTUtils.getContinueList(node.getStatement()), beginLabelNode);
+
+        mn.instructions.add(new JumpInsnNode(Opcodes.GOTO, beginLabelNode));
+
+        ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
+        ASTUtils.getNextList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
         
     }
 
     @Override
     public void visit(IfStatement node) throws ASTVisitorException {
-        // ASTUtils.setBooleanExpression(node.getExpression(), true);
+        ASTUtils.setBooleanExpression(node.getExpression(), true);
 
-        // node.getExpression().accept(this);
-        // LabelInstr beginStmtLabel = program.addNewLabel();
-        // Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
-        // node.getStatement().accept(this);
+        node.getExpression().accept(this);
 
-        // ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
-        // ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
+        LabelNode labelNode = new LabelNode();
+        mn.instructions.add(labelNode);
+        backpatch(ASTUtils.getTrueList(node.getExpression()), labelNode);
 
-        // ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getStatement()));
-        // ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getStatement()));
+        node.getStatement().accept(this);
+
+        ASTUtils.getBreakList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
+        ASTUtils.getContinueList(node).addAll(ASTUtils.getContinueList(node.getStatement()));
+
+        ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
+        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
     }
 
     @Override
     public void visit(IfElseStatement node) throws ASTVisitorException {
-        // ASTUtils.setBooleanExpression(node.getExpression(), true);
+        ASTUtils.setBooleanExpression(node.getExpression(), true);
 
-        // ASTUtils.setBooleanExpression(node.getExpression(), true);
+        node.getExpression().accept(this);
 
-        // node.getExpression().accept(this);
-        // LabelInstr beginStmtLabel = program.addNewLabel();
-        // Program.backpatch(ASTUtils.getTrueList(node.getExpression()), beginStmtLabel);
-        // node.getStatement().accept(this);
-        // GotoInstr gotoInstr = new GotoInstr();
-        // program.add(gotoInstr);
+        LabelNode stmt1StartLabelNode = new LabelNode();
+        mn.instructions.add(stmt1StartLabelNode);
+        node.getElseStatement().accept(this);
 
-        // LabelInstr beginElseLabel = program.addNewLabel();
-        // Program.backpatch(ASTUtils.getFalseList(node.getExpression()), beginElseLabel);
+        JumpInsnNode skipGoto = new JumpInsnNode(Opcodes.GOTO, null);
+        mn.instructions.add(skipGoto);
 
-        // ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
-        // ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getElseStatement()));
-        // ASTUtils.getNextList(node).add(gotoInstr);
+        LabelNode stmt2StartLabelNode = new LabelNode();
+        mn.instructions.add(stmt2StartLabelNode);
+        node.getElseStatement().accept(this);
 
-        // ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getStatement()));
-        // ASTUtils.setBreakList(node, ASTUtils.getBreakList(node.getElseStatement()));
+        backpatch(ASTUtils.getTrueList(node.getExpression()), stmt1StartLabelNode);
+        backpatch(ASTUtils.getFalseList(node.getExpression()), stmt2StartLabelNode);
 
-        // ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getStatement()));
-        // ASTUtils.setContinueList(node, ASTUtils.getContinueList(node.getElseStatement()));
+        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getElseStatement()));
+        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getElseStatement()));
+        ASTUtils.getNextList(node).add(skipGoto);
+
+        ASTUtils.getBreakList(node).addAll(ASTUtils.getBreakList(node.getElseStatement()));
+        ASTUtils.getBreakList(node).addAll(ASTUtils.getBreakList(node.getElseStatement()));
+
+        ASTUtils.getContinueList(node).addAll(ASTUtils.getContinueList(node.getElseStatement()));
+        ASTUtils.getContinueList(node).addAll(ASTUtils.getContinueList(node.getElseStatement()));
     }
 
     @Override
