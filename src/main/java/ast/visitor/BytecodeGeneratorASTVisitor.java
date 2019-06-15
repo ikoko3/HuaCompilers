@@ -11,14 +11,12 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
-import threeaddr.*;
 import types.TypeUtils;
 import ast.*;
 import ast.definition.*;
 import ast.expression.*;
 import ast.statement.*;
 import core.Operator;
-import core.Registry;
 import symbol.SymTableEntry;
 
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -40,8 +38,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         cn = new ClassNode();
         cn.access = Opcodes.ACC_PUBLIC;
         cn.version = Opcodes.V1_5;
-        cn.name = "test";
-        cn.sourceFile = "test.in";
+        cn.name = "Test";
+        cn.sourceFile = "Test.in";
         cn.superName = "java/lang/Object";
 
         mnStack = new ArrayDeque<MethodNode>() ;
@@ -52,10 +50,11 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         mn.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V"));
         mn.instructions.add(new InsnNode(Opcodes.RETURN));
-        mn.maxLocals = 1;
-        mn.maxStack = 1;
+        mn.maxLocals = 100;
+        mn.maxStack = 100;
         
         cn.methods.add(mn);
+
     }
     
     public ClassNode getClassNode() {
@@ -79,15 +78,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         }
         backpatchNextList(d);
 
-        mn.instructions.add(new InsnNode(Opcodes.RETURN));
-        mn.maxLocals = ASTUtils.getSafeLocalIndexPool(node).getMaxLocals() + 1;
+        mn.maxLocals = ASTUtils.getSafeLocalIndexPool(node).getMaxLocals() + 100;
 
-        // IMPORTANT: this should be dynamically calculated
-        // use COMPUTE_MAXS when computing the ClassWriter,
-        // e.g. new ClassWriter(ClassWriter.COMPUTE_MAXS)
-        mn.maxStack = 32;
-
-        //Prepei gia kathe function na exoyme allo method node
     }
 
     @Override
@@ -125,58 +117,26 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(BinaryExpression node) throws ASTVisitorException {
-        // //Expression1
-        // InheritBooleanAttributes(node, node.getExpression1());
-        // node.getExpression1().accept(this);
-        // String t1 = stack.pop();
+        Type expr1Type = ASTUtils.getSafeType(node.getExpression1());
+        Type expr2Type = ASTUtils.getSafeType(node.getExpression2());
+        Type maxType = TypeUtils.maxType(expr1Type, expr2Type);
 
-        // LabelInstr intrmLbl = null;
-        // if (node.getOperator().isLogical()) {
-        //     intrmLbl = program.addNewLabel();
-        // }
+        InheritBooleanAttributes(node, node.getExpression1());
+        node.getExpression1().accept(this);
+        widen(maxType,expr1Type);
 
-        // //Expression2
-        // InheritBooleanAttributes(node, node.getExpression2());
-        // node.getExpression2().accept(this);
-        // String t2 = stack.pop();
+       // InheritBooleanAttributes(node, node.getExpression2());
+        node.getExpression2().accept(this);
+        widen(maxType,expr2Type);
 
-        // if (ASTUtils.isBooleanExpression(node)) {
-        //     if (!node.getOperator().isRelational() && !node.getOperator().isLogical()) {
-        //         ASTUtils.error(node, "A not boolean expression used as boolean.");
-        //     }
-        //     switch (node.getOperator()) {
-        //         case AND:
-        //             ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression1()));
-        //             Program.backpatch(ASTUtils.getTrueList(node.getExpression1()), intrmLbl);
-
-        //             ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
-        //             ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
-        //             break;
-        //         case OR:
-        //             ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression1()));
-        //             Program.backpatch(ASTUtils.getFalseList(node.getExpression1()), intrmLbl);
-
-        //             ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
-        //             ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
-        //             break;
-        //         default:
-        //             break;
-        //     }
-
-        //     CondJumpInstr condJumpInstr = new CondJumpInstr(node.getOperator(), t1, t2);
-        //     program.add(condJumpInstr);
-        //     ASTUtils.getTrueList(node).add(condJumpInstr);
-
-        //     GotoInstr gotoInstr = new GotoInstr();
-        //     program.add(gotoInstr);
-        //     ASTUtils.getFalseList(node).add(gotoInstr);
-
-        // } else {
-
-        //     String t = createTemp();
-        //     program.add(new BinaryOpInstr(node.getOperator(), t1, t2, t));
-        //     stack.push(t);
-        //}
+        if (ASTUtils.isBooleanExpression(node)) {
+            handleBooleanOperator(node, node.getOperator(), maxType);
+        } else if (maxType.equals(TypeUtils.STRING_TYPE)) {
+            mn.instructions.add(new InsnNode(Opcodes.SWAP));
+            handleStringOperator(node, node.getOperator());
+        } else {
+            handleNumberOperator(node, node.getOperator(), maxType);
+        }
     }
 
     @Override
@@ -215,7 +175,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         int d = node.getLiteral();
         mnStack.element().instructions.add(new LdcInsnNode(d));
-
     }
 
     @Override
@@ -391,6 +350,18 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         }
         backpatchNextList(s);
         mnStack.pop();
+        fmn.maxLocals = ASTUtils.getSafeLocalIndexPool(node).getMaxLocals() + 1;
+        
+
+        // IMPORTANT: this should be dynamically calculated
+        // use COMPUTE_MAXS when computing the ClassWriter,
+        // e.g. new ClassWriter(ClassWriter.COMPUTE_MAXS)
+        //fmn.maxStack = 32;
+
+        if(ASTUtils.getSafeType(node).equals(Type.VOID_TYPE)){
+            fmn.instructions.add(new InsnNode(Opcodes.RETURN));
+        }
+        
         cn.methods.add(fmn);
     }
 
@@ -421,6 +392,9 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(CharLiteralExpression node) throws ASTVisitorException {
+
+        char d = node.getExpression();
+        mnStack.element().instructions.add(new LdcInsnNode(d));
         // String t = createTemp();
         // stack.push(t);
         // program.add(new AssignInstr(t,"\'" + node.getExpression() + "\'"));
@@ -429,18 +403,28 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(FunctionCallExpression node) throws ASTVisitorException {
 
-        // List<String> params = new ArrayList<String>();
-        // for (Expression e : node.getExpressions()) {
-        //     e.accept(this);
-        //     String param = stack.pop();
-        //     params.add(param);
-        // }
-
-        // for (String param : params) {
-        //     program.add(new ParamInstr(param));
-        //     stack.push(param);
-        // }
-        // program.add(new FunctionCallInstr(node.getIdentifier(), node.getExpressions().size()));
+        //TO DO: FIX FOR COMPLEX FUNCTIONS
+        List<String> params = new ArrayList<String>();
+         
+        if(!node.getIdentifier().equals("print")){
+            for (Expression e : node.getExpressions()) {
+                e.accept(this);
+            }
+            
+            SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,"Test", node.getIdentifier(), entry.getType().getDescriptor()));
+        }else {
+            //In the print function we know that there is only 1 parameter.
+            Expression expr = node.getExpressions().get(0);
+            
+            
+            mnStack.element().instructions.add(new FieldInsnNode(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"));
+            Type pType = ASTUtils.getSafeType(expr) ;
+            expr.accept(this);
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "("+pType.getDescriptor()+")V"));
+    
+        }
+        
     }
 
     @Override
@@ -496,29 +480,18 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(ReturnStatement node) throws ASTVisitorException {
         
-        // ReturnInstr returnInstr = new ReturnInstr();
-        
-        // if (node.getExpression() != null) {
-        //     node.getExpression().accept(this);
-        //     String t = stack.pop();
-        //     returnInstr.setValue(t);
-        // }
-        // program.add(returnInstr);
+        if (node.getExpression() != null) {
+            node.getExpression().accept(this);
+
+            Type exprType = ASTUtils.getSafeType(node.getExpression());
+            mnStack.element().instructions.add(new InsnNode(exprType.getOpcode(Opcodes.IRETURN)));
+        }
+        mnStack.element().instructions.add(new InsnNode(Opcodes.RETURN));
     }
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
               
-        // Type type = node.getVariable().getType();
-        // if(TypeUtils.isStructType(type)){
-        //     String t= createTemp();
-        //     program.add(new StructInitInstr(t,TypeUtils.getStructId(type)));
-        //     Registry.getInstance().getDefinedStructs().put(node.getVariable().getName(), t);
-        // }
-        // if (node.getVariable() instanceof Array){
-        //     String t = createTemp();
-        //     Registry.getInstance().getDefinedArrays().put(node.getVariable().getName(), t);
-        // }
     }
 
     private void backpatchNextList(Statement s) {
@@ -794,6 +767,13 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         } else {
             ASTUtils.error(node, "Operator not recognized.");
         }
+    }
+
+    private void InheritBooleanAttributes(ASTNode parent, Expression node) {
+        if (parent instanceof Expression && ASTUtils.isBooleanExpression((Expression) parent)) {
+            ASTUtils.setBooleanExpression(node, true);
+        }
+
     }
 
 }

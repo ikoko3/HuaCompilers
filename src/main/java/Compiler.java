@@ -87,30 +87,29 @@ public class Compiler {
                     // get code
                     byte code[] = cw.toByteArray();
                     
-                    String outputName = "test";
+                    String className = "Test";
                     String outputExtension = ".class";
 
                     // update to file
-                    LOGGER.info("Writing class to file "+outputName+outputExtension);
-                    FileOutputStream fos = new FileOutputStream(outputName+outputExtension);
+                    LOGGER.info("Writing class to file "+className+outputExtension);
+                    FileOutputStream fos = new FileOutputStream(className+outputExtension);
                     fos.write(code);
                     fos.close();
                     LOGGER.info("Compilation done");
 
                     // instantiate class
                     
-                    // LOGGER.info("Loading class "+outputName+outputExtension);
-                    // ReloadingClassLoader rcl = new ReloadingClassLoader(ClassLoader.getSystemClassLoader());
-                    // rcl.register(outputName, code);
-                    // Class<?> calculatorClass = rcl.loadClass(outputName);
+                    LOGGER.info("Loading class "+className+outputExtension);
+                    ReloadingClassLoader rcl = new ReloadingClassLoader(ClassLoader.getSystemClassLoader());
+                    rcl.register(className, code);
+                    Class<?> programClass = rcl.loadClass(className);
 
-                    // run main method
-                    // Method meth = calculatorClass.getMethod("main", String[].class);
-                    // String[] params = null;
-                    // LOGGER.info("Executing");
-                    // meth.invoke(null, (Object) params);
+                    //run main method
+                    Method meth = programClass.getMethod("main");
+                    LOGGER.info("Executing");
+                    meth.invoke(null);
 
-                    // LOGGER.info("Finished execution");
+                    LOGGER.info("Finished execution");
                 } catch (java.io.FileNotFoundException e) {
                     LOGGER.error("File not found : \"" + args[i] + "\"");
                 } catch (java.io.IOException e) {

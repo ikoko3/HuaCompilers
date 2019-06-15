@@ -1,6 +1,5 @@
 package ast.visitor;
 
-
 /**
  * This code is part of the lab exercises for the Compilers course at Harokopio
 
@@ -13,6 +12,8 @@ import ast.statement.*;
 import ast.definition.*;
 import ast.*;
 import core.Environment;
+
+import java.util.List;
 import java.util.Map;
 import org.objectweb.asm.Type;
 import symbol.SymTable;
@@ -106,7 +107,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(StringLiteralExpression node) throws ASTVisitorException {
-        ASTUtils.setType(node, Type.getType("[C"));
+        ASTUtils.setType(node, Type.getType("Ljava/lang/String;"));
     }
 
     @Override
@@ -164,13 +165,22 @@ public class CollectTypesASTVisitor implements ASTVisitor {
         ASTNode root = Registry.getInstance().getRoot();
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(root);
-        
-        
         st.put(node.getName(), new SymTableEntry(node.getName(),functionType));
         
         for(Statement s: node.getStatements()){
             s.accept(this);
         }   
+
+        
+        if(!node.getReturnType().equals(Type.VOID_TYPE)){
+            HasReturnASTVisitor returnVisitor = new HasReturnASTVisitor();
+            node.accept(returnVisitor);
+            if(!returnVisitor.containsReturn())
+                ASTUtils.error(node, "The function "+node.getName()+" must return a variable of type "+node.getReturnType().getClassName());
+        }
+                
+        
+        
         ASTUtils.setType(node, Type.VOID_TYPE);
     }
 
@@ -351,6 +361,19 @@ public class CollectTypesASTVisitor implements ASTVisitor {
        Type expectedType = Type.getMethodType(Type.VOID_TYPE);
        if(!mainFunction.getType().equals(expectedType))
            throw new ASTVisitorException("Main function must return void and have 0 parameters.");
+   }
+
+   private Boolean hasNoReturnStatement(List<Statement> statments){
+    for(Statement s: statments){
+        if( s instanceof ReturnStatement)
+            return false;
+        else if (s instanceof IfStatement ){
+            IfStatement st = (IfStatement) s;
+            
+        }
+
+    }    
+    return true;
    }
 
 }

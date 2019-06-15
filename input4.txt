@@ -1,0 +1,13 @@
+int myFunc(int i) {
+	
+	return i +30;
+}
+
+
+void main() {
+	int x;
+	x = 100;
+	print("calling my function with parameter 100, result =");
+	print(myFunc(x));
+
+}

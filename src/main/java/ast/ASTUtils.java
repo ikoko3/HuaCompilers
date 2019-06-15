@@ -11,6 +11,9 @@ import org.objectweb.asm.Type;
 
 import org.objectweb.asm.tree.JumpInsnNode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ASTUtils {
 
     public static final String SYMTABLE_PROPERTY = "SYMTABLE_PROPERTY";
@@ -30,6 +33,8 @@ public class ASTUtils {
     public static final String FALSE_LIST_PROPERTY = "FALSE_LIST_PROPERTY";
 
     public static final String INDEX_PROPERTY = "INDEX_PROPERTY";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Compiler.class);
 
     private ASTUtils() {
     }
@@ -92,7 +97,7 @@ public class ASTUtils {
         return type;
     }
 
-    public static void setType(ASTNode node, Type type) {
+     public static void setType(ASTNode node, Type type) {
         node.setProperty(TYPE_PROPERTY, type);
     }
 
@@ -193,6 +198,10 @@ public class ASTUtils {
             throws ASTVisitorException {
         throw new ASTVisitorException(node.getLine() + ":" + node.getColumn()
                 + ": " + message);
+    }
+
+    public static void warning(ASTNode node,String message){
+        LOGGER.info("WARNING - ("+node.getLine() + ":" + node.getColumn()+") : "+message);
     }
 
 }
