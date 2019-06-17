@@ -19,6 +19,7 @@ import ast.statement.*;
 import core.Operator;
 import symbol.SymTable;
 import symbol.SymTableEntry;
+import threeaddr.LabelInstr;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
@@ -126,12 +127,44 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         node.getExpression1().accept(this);
         widen(maxType,expr1Type);
 
+        LabelNode intrmLbl = null;
+        if (node.getOperator().isLogical()) {
+            intrmLbl = new LabelNode();
+            mnStack.element().instructions.add(intrmLbl);
+        }
+
         InheritBooleanAttributes(node, node.getExpression2());
         node.getExpression2().accept(this);
         widen(maxType,expr2Type);
 
         if (ASTUtils.isBooleanExpression(node)) {
-            handleBooleanOperator(node, node.getOperator(), maxType);
+            
+            if(node.getOperator().isLogical()){
+                switch (node.getOperator()) {
+                    case AND:
+                        ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression1()));
+                        backpatch(ASTUtils.getTrueList(node.getExpression1()), intrmLbl);
+    
+                        ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
+                        ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
+                        break;
+                    case OR:
+                        ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression1()));
+                        backpatch(ASTUtils.getFalseList(node.getExpression1()), intrmLbl);
+    
+                        ASTUtils.getFalseList(node).addAll(ASTUtils.getFalseList(node.getExpression2()));
+                        ASTUtils.getTrueList(node).addAll(ASTUtils.getTrueList(node.getExpression2()));
+                        break;
+                    default:
+                        break;
+                }
+                JumpInsnNode fl = new JumpInsnNode(Opcodes.GOTO,null);
+                        ASTUtils.getFalseList(node).add(fl);
+                        mnStack.element().instructions.add(fl);
+            }else{
+                handleBooleanOperator(node, node.getOperator(), maxType);
+            }
+            
         } else if (maxType.equals(TypeUtils.STRING_TYPE)) {
             mn.instructions.add(new InsnNode(Opcodes.SWAP));
             handleStringOperator(node, node.getOperator());
@@ -144,8 +177,9 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     public void visit(UnaryExpression node) throws ASTVisitorException {
         InheritBooleanAttributes(node, node.getExpression());
         node.getExpression().accept(this);
+        Type exprType = ASTUtils.getSafeType(node.getExpression());
 
-        handleUnaryOperator(node,node.getOperator());
+        handleUnaryOperator(node,node.getOperator(),exprType);
 
     }
 
@@ -207,7 +241,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
-        
     }
 
     @Override
@@ -227,6 +260,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
+
+        inheritWhileLists(node,node.getStatement());
     }
 
     @Override
@@ -237,7 +272,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         LabelNode stmt1StartLabelNode = new LabelNode();
         mnStack.element().instructions.add(stmt1StartLabelNode);
-        node.getElseStatement().accept(this);
+        node.getStatement().accept(this);
 
         JumpInsnNode skipGoto = new JumpInsnNode(Opcodes.GOTO, null);
         mnStack.element().instructions.add(skipGoto);
@@ -249,55 +284,46 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         backpatch(ASTUtils.getTrueList(node.getExpression()), stmt1StartLabelNode);
         backpatch(ASTUtils.getFalseList(node.getExpression()), stmt2StartLabelNode);
 
-        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getElseStatement()));
+        ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getElseStatement()));
         ASTUtils.getNextList(node).add(skipGoto);
 
-        ASTUtils.getBreakList(node).addAll(ASTUtils.getBreakList(node.getElseStatement()));
-        ASTUtils.getBreakList(node).addAll(ASTUtils.getBreakList(node.getElseStatement()));
-
-        ASTUtils.getContinueList(node).addAll(ASTUtils.getContinueList(node.getElseStatement()));
-        ASTUtils.getContinueList(node).addAll(ASTUtils.getContinueList(node.getElseStatement()));
+        inheritWhileLists(node,node.getStatement());
+        inheritWhileLists(node,node.getElseStatement());
     }
 
     @Override
     public void visit(BreakStatement node) throws ASTVisitorException {
-
-        // GotoInstr gotoInstr = new GotoInstr();
-        // program.add(gotoInstr);
-        // ASTUtils.getBreakList(node).add(gotoInstr);
+        JumpInsnNode jmp = new JumpInsnNode(Opcodes.GOTO, null);
+        mnStack.element().instructions.add(jmp);
+        ASTUtils.getBreakList(node).add(jmp);
 
     }
 
     @Override
     public void visit(ContinueStatement node) throws ASTVisitorException {
-
-        // GotoInstr gotoInstr = new GotoInstr();
-        // program.add(gotoInstr);
-        // ASTUtils.getContinueList(node).add(gotoInstr);
+        JumpInsnNode jmp = new JumpInsnNode(Opcodes.GOTO, null);
+        mnStack.element().instructions.add(jmp);
+        ASTUtils.getContinueList(node).add(jmp);
 
     }
 
     @Override
     public void visit(CompoundStatement node) throws ASTVisitorException {
-        // List<GotoInstr> breakList = new ArrayList<GotoInstr>();
-        // List<GotoInstr> continueList = new ArrayList<GotoInstr>();
-        // Statement ps,s=null;
-        // Iterator<Statement> it = node.getStatements().iterator();
+        Statement ps,s=null;
+        Iterator<Statement> it = node.getStatements().iterator();
 
-        // while (it.hasNext()) {
-        //     ps = s;
-        //     s = it.next();
+        while (it.hasNext()) {
+            ps = s;
+            s = it.next();
 
-        //     backpatchNextList(ps);
-        //     s.accept(this);
-        //     breakList.addAll(ASTUtils.getBreakList(s));
-        //     continueList.addAll(ASTUtils.getContinueList(s));
-        // }
-        // backpatchNextList(s);
+            backpatchNextList(ps);
+            s.accept(this);
+            
+            inheritWhileLists(node, s);
+        }
+        backpatchNextList(s);
 
-        // ASTUtils.setBreakList(node, breakList);
-        // ASTUtils.setContinueList(node, continueList);
     }
 
     @Override
@@ -337,7 +363,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
             backpatchNextList(ps);
             s.accept(this);
-            
         }
         backpatchNextList(s);
         mnStack.pop();
@@ -398,12 +423,19 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         List<String> params = new ArrayList<String>();
          
         if(!node.getIdentifier().equals("print")){
+            SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+            int i=0;
+
             for (Expression e : node.getExpressions()) {
+                Type target = entry.getType().getArgumentTypes()[i];
                 e.accept(this);
+                widen(target, ASTUtils.getSafeType(e));
+                i++;
             }
             
-            SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+            
             mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,"Test", node.getIdentifier(), entry.getType().getDescriptor()));
+
         }else {
             //In the print function we know that there is only 1 parameter.
             Expression expr = node.getExpressions().get(0);
@@ -703,6 +735,10 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
                     jmp = new JumpInsnNode(Opcodes.IF_ICMPLE, null);
                     mnStack.element().instructions.add(jmp);
                     break;
+                case AND:
+                    break;
+                case OR:
+                    break;
                 default:
                     ASTUtils.error(node, "Operator not supported");
                     break;
@@ -717,10 +753,17 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         ASTUtils.setFalseList(node, falseList);
     }
 
-    private void handleUnaryOperator(UnaryExpression node, Operator op){
-        if (op.equals(Operator.NOT)) {
-            ASTUtils.setFalseList(node, ASTUtils.getTrueList(node.getExpression()));
-            ASTUtils.setTrueList(node, ASTUtils.getFalseList(node.getExpression()));
+    private void handleUnaryOperator(UnaryExpression node, Operator op,Type type) throws ASTVisitorException{
+        switch(op){
+            case NOT:
+                ASTUtils.setFalseList(node, ASTUtils.getTrueList(node.getExpression()));
+                ASTUtils.setTrueList(node, ASTUtils.getFalseList(node.getExpression()));
+                break;
+            case MINUS:
+                mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.INEG)));
+                break;
+            default:
+                ASTUtils.error(node,"This operator is not supported in unary expressions");
         }
     }
 
@@ -763,105 +806,15 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         }
     }
 
-    // private void handleNumberOperator(ASTNode node, Operator op, Type type) throws ASTVisitorException {
-    //     //TO DO: widen int to float
-    //     if (op.equals(Operator.PLUS)) {
-            
-    //         mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IADD)));
-    //     } else if (op.equals(Operator.MINUS)) {
-            
-    //         mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.ISUB)));
-    //     } else if (op.equals(Operator.MULTIPLY)) {
-            
-    //         mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IMUL)));
-    //     } else if (op.equals(Operator.DIVISION)) {
-            
-    //         mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IDIV)));
-    //     } else if (op.isRelational()) {
-            
-    //         if (type.equals(Type.FLOAT_TYPE)) {
-    //             mnStack.element().instructions.add(new InsnNode(Opcodes.FCMPG));
-    //             JumpInsnNode jmp = null;
-    //             switch (op) {
-    //                 case EQUAL:
-    //                     jmp = new JumpInsnNode(Opcodes.IFEQ, null);
-    //                     mnStack.element().instructions.add(jmp);
-    //                     break;
-    //                 case NOT_EQUAL:
-    //                     jmp = new JumpInsnNode(Opcodes.IFNE, null);
-    //                     mnStack.element().instructions.add(jmp);
-    //                     break;
-    //                 case GREATER:
-    //                     jmp = new JumpInsnNode(Opcodes.IFGT, null);
-    //                     mnStack.element().instructions.add(jmp);
-    //                     break;
-    //                 case GREATER_EQ:
-    //                     jmp = new JumpInsnNode(Opcodes.IFGE, null);
-    //                     mnStack.element().instructions.add(jmp);
-    //                     break;
-    //                 case LESS:
-    //                     jmp = new JumpInsnNode(Opcodes.IFLT, null);
-    //                     mnStack.element().instructions.add(jmp);
-    //                     break;
-    //                 case LESS_EQ:
-    //                     jmp = new JumpInsnNode(Opcodes.IFLE, null);
-    //                     mnStack.element().instructions.add(jmp);
-    //                     break;
-    //                 default:
-    //                     ASTUtils.error(node, "Operator not supported");
-    //                     break;
-    //             }
-    //             mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_0));
-    //             LabelNode endLabelNode = new LabelNode();
-    //             mnStack.element().instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
-    //             LabelNode trueLabelNode = new LabelNode();
-    //             jmp.label = trueLabelNode;
-    //             mnStack.element().instructions.add(trueLabelNode);
-    //             mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_1));
-    //             mnStack.element().instructions.add(endLabelNode);
-    //         } else if (type.equals(Type.INT_TYPE)) {
-    //             LabelNode trueLabelNode = new LabelNode();
-    //             switch (op) {
-    //                 case EQUAL:
-    //                     mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPEQ, trueLabelNode));
-    //                     break;
-    //                 case NOT_EQUAL:
-    //                     mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPNE, trueLabelNode));
-    //                     break;
-    //                 case GREATER:
-    //                     mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPGT, trueLabelNode));
-    //                     break;
-    //                 case GREATER_EQ:
-    //                     mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPGE, trueLabelNode));
-    //                     break;
-    //                 case LESS:
-    //                     mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPLT, trueLabelNode));
-    //                     break;
-    //                 case LESS_EQ:
-    //                     mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IF_ICMPLE, trueLabelNode));
-    //                     break;
-    //                 default:
-    //                     break;
-    //             }
-    //             mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_0));
-    //             LabelNode endLabelNode = new LabelNode();
-    //             mnStack.element().instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
-    //             mnStack.element().instructions.add(trueLabelNode);
-    //             mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_1));
-    //             mnStack.element().instructions.add(endLabelNode);
-    //         } else {
-    //             ASTUtils.error(node, "Cannot compare such types.");
-    //         }
-    //     } else {
-    //         ASTUtils.error(node, "Operator not recognized.");
-    //     }
-    // }
-
     private void InheritBooleanAttributes(ASTNode parent, Expression node) {
         if (parent instanceof Expression && ASTUtils.isBooleanExpression((Expression) parent)) {
             ASTUtils.setBooleanExpression(node, true);
         }
+    }
 
+    private void inheritWhileLists(Statement parent, Statement child){
+        ASTUtils.getBreakList(parent).addAll(ASTUtils.getBreakList(child));
+        ASTUtils.getContinueList(parent).addAll(ASTUtils.getContinueList(child));
     }
 
 }

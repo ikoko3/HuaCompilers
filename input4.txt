@@ -1,14 +1,11 @@
-float myFunc(int i) {
-	print(i);
-	return i + 30.89;
+float myFunc(int i,float t) {
+
+	return i + t;
 }
 
 
 void main() {
 	int x;
-	x = 49;
-	if(!(x>5))
-		print("test");
-	print("calling my function with parameter 100, result =");
-	print(myFunc(x));
+	x = 5;
+	print(myFunc(x,9.23));
 }
