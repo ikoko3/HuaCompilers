@@ -363,17 +363,4 @@ public class CollectTypesASTVisitor implements ASTVisitor {
            throw new ASTVisitorException("Main function must return void and have 0 parameters.");
    }
 
-   private Boolean hasNoReturnStatement(List<Statement> statments){
-    for(Statement s: statments){
-        if( s instanceof ReturnStatement)
-            return false;
-        else if (s instanceof IfStatement ){
-            IfStatement st = (IfStatement) s;
-            
-        }
-
-    }    
-    return true;
-   }
-
 }

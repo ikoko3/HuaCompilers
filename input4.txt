@@ -6,7 +6,9 @@ int myFunc(int i) {
 
 void main() {
 	int x;
-	x = 100;
+	x = 49;
+	if( !(x < 50))
+		print("test");
 	print("calling my function with parameter 100, result =");
 	print(myFunc(x));
 

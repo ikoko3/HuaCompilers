@@ -125,7 +125,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         node.getExpression1().accept(this);
         widen(maxType,expr1Type);
 
-       // InheritBooleanAttributes(node, node.getExpression2());
+        InheritBooleanAttributes(node, node.getExpression2());
         node.getExpression2().accept(this);
         widen(maxType,expr2Type);
 
@@ -141,19 +141,11 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(UnaryExpression node) throws ASTVisitorException {
-        // InheritBooleanAttributes(node, node.getExpression());
-        // node.getExpression().accept(this);
-        // String t1 = stack.pop();
-        // String t = createTemp();
-        // stack.push(t);
+        InheritBooleanAttributes(node, node.getExpression());
+        node.getExpression().accept(this);
 
-        // if (node.getOperator().equals(Operator.NOT)) {
-        //     List<GotoInstr> struct_varList = ASTUtils.getFalseList(node);
-        //     ASTUtils.setFalseList(node, ASTUtils.getTrueList(node));
-        //     ASTUtils.setTrueList(node, struct_varList);
-        // }
+        handleUnaryOperator(node,node.getOperator());
 
-        // program.add(new UnaryOpInstr(node.getOperator(), t1, t));
     }
 
     @Override
@@ -188,10 +180,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(ParenthesisExpression node) throws ASTVisitorException {
         node.getExpression().accept(this);
-        // String t1 = stack.pop();
-        // String t = createTemp();
-        // stack.push(t);
-        // program.add(new AssignInstr(t1, t));
+        ASTUtils.setTrueList(node, ASTUtils.getTrueList(node.getExpression()));
+        ASTUtils.setFalseList(node, ASTUtils.getFalseList(node.getExpression()));
     }
 
     @Override
@@ -561,9 +551,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             }
             mnStack.element().instructions.add(jmp);
             trueList.add(jmp);
-        } else if (type.equals(Type.DOUBLE_TYPE)) {
-            
-            mnStack.element().instructions.add(new InsnNode(Opcodes.DCMPG));
+        } else if (type.equals(Type.FLOAT_TYPE)) {
+            mnStack.element().instructions.add(new InsnNode(Opcodes.FCMPG));
             JumpInsnNode jmp = null;
                 switch (op) {
                     case EQUAL:
@@ -637,6 +626,14 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         ASTUtils.setFalseList(node, falseList);
     }
 
+    private void handleUnaryOperator(Expression node, Operator op){
+        if (op.equals(Operator.NOT)) {
+            List<JumpInsnNode> struct_varList = ASTUtils.getFalseList(node);
+            ASTUtils.setFalseList(node, ASTUtils.getTrueList(node));
+            ASTUtils.setTrueList(node, struct_varList);
+        }
+    }
+
     /**
      * Assumes top of stack contains two strings
      */
@@ -677,6 +674,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     }
 
     private void handleNumberOperator(ASTNode node, Operator op, Type type) throws ASTVisitorException {
+        //TO DO: widen int to float
         if (op.equals(Operator.PLUS)) {
             
             mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IADD)));
@@ -691,8 +689,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IDIV)));
         } else if (op.isRelational()) {
             
-            if (type.equals(Type.DOUBLE_TYPE)) {
-                mnStack.element().instructions.add(new InsnNode(Opcodes.DCMPG));
+            if (type.equals(Type.FLOAT_TYPE)) {
+                mnStack.element().instructions.add(new InsnNode(Opcodes.FCMPG));
                 JumpInsnNode jmp = null;
                 switch (op) {
                     case EQUAL:

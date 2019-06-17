@@ -1,25 +1,11 @@
 package ast.visitor;
 
-/**
- * This code is part of the lab exercises for the Compilers course at Harokopio
-
- * University of Athens, Dept. of Informatics and Telematics.
- */
-
-import core.Registry;
 import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
 import ast.*;
-import core.Environment;
 
 import java.util.List;
-import java.util.Map;
-import org.objectweb.asm.Type;
-import symbol.SymTable;
-import symbol.SymTableEntry;
-import types.exception.*;
-import types.TypeUtils;
 
 /**
  * Check if the a set of statements have a return statement.
@@ -88,8 +74,6 @@ public class HasReturnASTVisitor implements ASTVisitor {
     public void visit(CompoundStatement node) throws ASTVisitorException {
         HandleStatements(node,node.getStatements());
     }
-
-    
 
     @Override
     public void visit(Array node) throws ASTVisitorException {
@@ -194,8 +178,6 @@ public class HasReturnASTVisitor implements ASTVisitor {
             if(stContsReturn){
                 stContsReturn = true;
 
-                int idx = statements.indexOf(st);
-                int size = statements.size();
                 if(statements.indexOf(st) < statements.size() - 1)
                     ASTUtils.warning(st,"Unreachable code after this line.");
 
