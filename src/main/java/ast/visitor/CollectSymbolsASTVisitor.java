@@ -105,12 +105,15 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
     public void visit(Array node) throws ASTVisitorException {
         String varName = node.getName();
         Type varType = Type.getType("["+node.getType().getDescriptor());
+
+        LocalIndexPool safeLocalIndexPool = ASTUtils.getSafeLocalIndexPool(node);
+        int localIndex = safeLocalIndexPool.getLocalIndex(node.getType());
         
         SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
         if(st.lookupOnlyInTop(varName) != null)
             ASTUtils.error(node, "Dublicate array declaration: "+varName);
         
-        st.put(varName, new SymTableEntry(varName,varType));
+        st.put(varName, new SymTableEntry(varName,varType,localIndex));
         
         setProperties(node);
     }

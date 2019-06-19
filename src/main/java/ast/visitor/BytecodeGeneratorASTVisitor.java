@@ -16,10 +16,10 @@ import ast.*;
 import ast.definition.*;
 import ast.expression.*;
 import ast.statement.*;
+import core.ByteCodeUtils;
 import core.Operator;
 import symbol.SymTable;
 import symbol.SymTableEntry;
-import threeaddr.LabelInstr;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
@@ -93,6 +93,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         SymTableEntry symEntry = null;
 
         if(target instanceof IdentifierExpression){
+
+            
             IdentifierExpression t =  (IdentifierExpression) target;
             symEntry = ASTUtils.getSafeSymbolTable(node).lookup(t.getIdentifier());
         }else if(target instanceof ArrayAccessExpression){
@@ -105,15 +107,15 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             StructArrayAccessExpression t = (StructArrayAccessExpression) target;
             symEntry = null;
         }else{
-            ASTUtils.error(node, "Assingment is not implemented for the type "+target.getClass());
+            ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
         }
 
         if(symEntry == null)
-            ASTUtils.error(node, "Assingment is not implemented for the type "+target.getClass());
+            ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
             
-        widen(symEntry.getType(),exprType);
+            ByteCodeUtils.widen(symEntry.getType(),exprType,mnStack.element());
         
-        mnStack.element().instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
+            mnStack.element().instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
 
     }
 
@@ -125,7 +127,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         InheritBooleanAttributes(node, node.getExpression1());
         node.getExpression1().accept(this);
-        widen(maxType,expr1Type);
+        ByteCodeUtils.widen(maxType,expr1Type,mnStack.element());
 
         LabelNode intrmLbl = null;
         if (node.getOperator().isLogical()) {
@@ -135,7 +137,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         InheritBooleanAttributes(node, node.getExpression2());
         node.getExpression2().accept(this);
-        widen(maxType,expr2Type);
+        ByteCodeUtils.widen(maxType,expr2Type,mnStack.element());
 
         if (ASTUtils.isBooleanExpression(node)) {
             
@@ -162,14 +164,14 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
                         ASTUtils.getFalseList(node).add(fl);
                         mnStack.element().instructions.add(fl);
             }else{
-                handleBooleanOperator(node, node.getOperator(), maxType);
+                ByteCodeUtils.handleBooleanOperator(node, node.getOperator(), maxType,mnStack.element());
             }
             
         } else if (maxType.equals(TypeUtils.STRING_TYPE)) {
             mn.instructions.add(new InsnNode(Opcodes.SWAP));
-            handleStringOperator(node, node.getOperator());
+            ByteCodeUtils.handleStringOperator(node, node.getOperator(),mnStack.element());
         } else {
-            handleNumberOperator(node, node.getOperator(), maxType);
+            ByteCodeUtils.handleNumberOperator(node, node.getOperator(), maxType,mnStack.element());
         }
     }
 
@@ -179,7 +181,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         node.getExpression().accept(this);
         Type exprType = ASTUtils.getSafeType(node.getExpression());
 
-        handleUnaryOperator(node,node.getOperator(),exprType);
+        ByteCodeUtils.handleUnaryOperator(node,node.getOperator(),exprType,mnStack.element());
 
     }
 
@@ -328,7 +330,10 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Array node) throws ASTVisitorException {
-
+        mnStack.element().instructions.add(new LdcInsnNode(node.getLength()));
+        SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
+        mnStack.element().instructions.add(new MultiANewArrayInsnNode(entry.getType().getDescriptor(),1));
+        mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
     }
 
     @Override
@@ -429,7 +434,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             for (Expression e : node.getExpressions()) {
                 Type target = entry.getType().getArgumentTypes()[i];
                 e.accept(this);
-                widen(target, ASTUtils.getSafeType(e));
+                ByteCodeUtils.widen(target, ASTUtils.getSafeType(e),mnStack.element());
                 i++;
             }
             
@@ -510,7 +515,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
             SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
             Type returnType = st.lookup(ASTUtils.getCurrentFunctionName(node)).getType().getReturnType();
-            widen(returnType, exprType);
+            ByteCodeUtils.widen(returnType, exprType,mnStack.element());
 
             mnStack.element().instructions.add(new InsnNode(returnType.getOpcode(Opcodes.IRETURN)));
         }else{
@@ -521,7 +526,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
-              
+        node.getVariable().accept(this);
     }
 
     private void backpatchNextList(Statement s) {
@@ -545,266 +550,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     /**
      * Cast the top of the stack to a particular type
      */
-    private void widen(Type target, Type source) {
-        if (source.equals(target)) {
-            return;
-        }
-
-        if (source.equals(Type.INT_TYPE)) {
-            if (target.equals(Type.FLOAT_TYPE)) {
-                mnStack.element().instructions.add(new InsnNode(Opcodes.I2F));
-            } else if (target.equals(TypeUtils.STRING_TYPE)) {
-                mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Integer", "toString", "(I)Ljava/lang/String;"));
-            }
-        } else if (source.equals(Type.FLOAT_TYPE)) {
-            if (target.equals(TypeUtils.STRING_TYPE)) {
-                mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Double", "toString", "(D)Ljava/lang/String;"));
-            }
-        }
-    }
-
-    private void handleNumberOperator(Expression node, Operator op, Type type) throws ASTVisitorException {
-        List<JumpInsnNode> trueList = new ArrayList<JumpInsnNode>();
-        if (op.equals(Operator.PLUS)) {
-
-            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IADD)));
-        } else if (op.equals(Operator.MINUS)) {
-
-            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.ISUB)));
-        } else if (op.equals(Operator.MULTIPLY)) {
-
-            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IMUL)));
-        } else if (op.equals(Operator.DIVISION)) {
-
-            mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.IDIV)));
-        } else if (op.isRelational()) {
-
-            if (type.equals(Type.FLOAT_TYPE)) {
-                mnStack.element().instructions.add(new InsnNode(Opcodes.FCMPG));
-                JumpInsnNode jmp = null;
-                switch (op) {
-                    case EQUAL:
-                        jmp = new JumpInsnNode(Opcodes.IFEQ, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case NOT_EQUAL:
-                        jmp = new JumpInsnNode(Opcodes.IFNE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case GREATER:
-                        jmp = new JumpInsnNode(Opcodes.IFGT, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case GREATER_EQ:
-                        jmp = new JumpInsnNode(Opcodes.IFGE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case LESS:
-                        jmp = new JumpInsnNode(Opcodes.IFLT, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case LESS_EQ:
-                        jmp = new JumpInsnNode(Opcodes.IFLE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    default:
-                        ASTUtils.error(node, "Operator not supported");
-                        break;
-                }
-                trueList.add(jmp);
-            } else if (type.equals(Type.INT_TYPE)) {
-                JumpInsnNode jmp = null;
-                switch (op) {
-                    case EQUAL:
-                        jmp = new JumpInsnNode(Opcodes.IF_ICMPEQ, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case NOT_EQUAL:
-                        jmp = new JumpInsnNode(Opcodes.IF_ICMPNE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case GREATER:
-                        jmp = new JumpInsnNode(Opcodes.IF_ICMPGT, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case GREATER_EQ:
-                        jmp = new JumpInsnNode(Opcodes.IF_ICMPGE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case LESS:
-                        jmp = new JumpInsnNode(Opcodes.IF_ICMPLT, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case LESS_EQ:
-                    jmp = new JumpInsnNode(Opcodes.IF_ICMPLT, null);
-                    mnStack.element().instructions.add(jmp);
-                    break;
-                default:
-                    break;
-            }
-            trueList.add(jmp);
-        }
-
-    }
-        ASTUtils.setTrueList(node, trueList);
-        List<JumpInsnNode> falseList = new ArrayList<JumpInsnNode>();
-        JumpInsnNode jmp = new JumpInsnNode(Opcodes.GOTO, null);
-
-        falseList.add(jmp);
-        ASTUtils.setFalseList(node, falseList);
-    }
-
-    private void handleBooleanOperator(Expression node, Operator op, Type type) throws ASTVisitorException {
-        List<JumpInsnNode> trueList = new ArrayList<JumpInsnNode>();
-
-        if (type.equals(TypeUtils.STRING_TYPE)) {
-            mnStack.element().instructions.add(new InsnNode(Opcodes.SWAP));
-            JumpInsnNode jmp = null;
-            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
-            switch (op) {
-                case EQUAL:
-                    jmp = new JumpInsnNode(Opcodes.IFNE, null);
-                    break;
-                case NOT_EQUAL:
-                    jmp = new JumpInsnNode(Opcodes.IFEQ, null);
-                    break;
-                default:
-                    ASTUtils.error(node, "Operator not supported on strings");
-                    break;
-            }
-            mnStack.element().instructions.add(jmp);
-            trueList.add(jmp);
-        } else if (type.equals(Type.FLOAT_TYPE)) {
-            mnStack.element().instructions.add(new InsnNode(Opcodes.FCMPG));
-            JumpInsnNode jmp = null;
-                switch (op) {
-                    case EQUAL:
-                        jmp = new JumpInsnNode(Opcodes.IFEQ, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case NOT_EQUAL:
-                        jmp = new JumpInsnNode(Opcodes.IFNE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case GREATER:
-                        jmp = new JumpInsnNode(Opcodes.IFGT, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case GREATER_EQ:
-                        jmp = new JumpInsnNode(Opcodes.IFGE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case LESS:
-                        jmp = new JumpInsnNode(Opcodes.IFLT, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    case LESS_EQ:
-                        jmp = new JumpInsnNode(Opcodes.IFLE, null);
-                        mnStack.element().instructions.add(jmp);
-                        break;
-                    default:
-                        ASTUtils.error(node, "Operator not supported");
-                        break;
-                }
-                trueList.add(jmp);
-            
-        } else {
-            JumpInsnNode jmp = null;
-            switch (op) {
-                case EQUAL:
-                    jmp = new JumpInsnNode(Opcodes.IF_ICMPEQ, null);
-                    mnStack.element().instructions.add(jmp);
-                    break;
-                case NOT_EQUAL:
-                    jmp = new JumpInsnNode(Opcodes.IF_ICMPNE, null);
-                    mnStack.element().instructions.add(jmp);
-                    break;
-                case GREATER:
-                    jmp = new JumpInsnNode(Opcodes.IF_ICMPGT, null);
-                    mnStack.element().instructions.add(jmp);
-                    break;
-                case GREATER_EQ:
-                    jmp = new JumpInsnNode(Opcodes.IF_ICMPGE, null);
-                    mnStack.element().instructions.add(jmp);
-                    break;
-                case LESS:
-                    jmp = new JumpInsnNode(Opcodes.IF_ICMPLT, null);
-                    mnStack.element().instructions.add(jmp);
-                    break;
-                case LESS_EQ:
-                    jmp = new JumpInsnNode(Opcodes.IF_ICMPLE, null);
-                    mnStack.element().instructions.add(jmp);
-                    break;
-                case AND:
-                    break;
-                case OR:
-                    break;
-                default:
-                    ASTUtils.error(node, "Operator not supported");
-                    break;
-            }
-            trueList.add(jmp);
-        }
-        ASTUtils.setTrueList(node, trueList);
-        List<JumpInsnNode> falseList = new ArrayList<JumpInsnNode>();
-        JumpInsnNode jmp = new JumpInsnNode(Opcodes.GOTO, null);
-        mnStack.element().instructions.add(jmp);
-        falseList.add(jmp);
-        ASTUtils.setFalseList(node, falseList);
-    }
-
-    private void handleUnaryOperator(UnaryExpression node, Operator op,Type type) throws ASTVisitorException{
-        switch(op){
-            case NOT:
-                ASTUtils.setFalseList(node, ASTUtils.getTrueList(node.getExpression()));
-                ASTUtils.setTrueList(node, ASTUtils.getFalseList(node.getExpression()));
-                break;
-            case MINUS:
-                mnStack.element().instructions.add(new InsnNode(type.getOpcode(Opcodes.INEG)));
-                break;
-            default:
-                ASTUtils.error(node,"This operator is not supported in unary expressions");
-        }
-    }
-
-    /**
-     * Assumes top of stack contains two strings
-     */
-    private void handleStringOperator(ASTNode node, Operator op) throws ASTVisitorException {
-        if (op.equals(Operator.PLUS)) {
-            mnStack.element().instructions.add(new TypeInsnNode(Opcodes.NEW, "java/lang/StringBuilder"));
-            mnStack.element().instructions.add(new InsnNode(Opcodes.DUP));
-            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V"));
-            mnStack.element().instructions.add(new InsnNode(Opcodes.SWAP));
-            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;"));
-            mnStack.element().instructions.add(new InsnNode(Opcodes.SWAP));
-            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;"));
-            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;"));
-        } else if (op.isRelational()) {
-            LabelNode trueLabelNode = new LabelNode();
-            switch (op) {
-                case EQUAL:
-                    mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
-                    mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IFNE, trueLabelNode));
-                    break;
-                case NOT_EQUAL:
-                    mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z"));
-                    mnStack.element().instructions.add(new JumpInsnNode(Opcodes.IFEQ, trueLabelNode));
-                    break;
-                default:
-                    ASTUtils.error(node, "Operator not supported on strings");
-                    break;
-            }
-            mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_0));
-            LabelNode endLabelNode = new LabelNode();
-            mnStack.element().instructions.add(new JumpInsnNode(Opcodes.GOTO, endLabelNode));
-            mnStack.element().instructions.add(trueLabelNode);
-            mnStack.element().instructions.add(new InsnNode(Opcodes.ICONST_1));
-            mnStack.element().instructions.add(endLabelNode);
-        } else {
-            ASTUtils.error(node, "Operator not recognized");
-        }
-    }
+   
 
     private void InheritBooleanAttributes(ASTNode parent, Expression node) {
         if (parent instanceof Expression && ASTUtils.isBooleanExpression((Expression) parent)) {

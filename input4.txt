@@ -8,4 +8,6 @@ void main() {
 	int x;
 	x = 5;
 	print(myFunc(x,9.23));
+
+	int arr[10];
 }
