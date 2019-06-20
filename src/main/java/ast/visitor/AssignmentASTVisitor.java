@@ -31,8 +31,12 @@ import org.objectweb.asm.tree.*;
 public class AssignmentASTVisitor implements ASTVisitor {
 
     private MethodNode mn;
+    private Expression value;
+    private BytecodeGeneratorASTVisitor bCGenerator;
 
-    public AssignmentASTVisitor(MethodNode mn) {
+    public AssignmentASTVisitor(BytecodeGeneratorASTVisitor bCGenerator, Expression value, MethodNode mn) {
+        this.bCGenerator = bCGenerator;
+        this.value = value;
         this.mn = mn;
     }
 
@@ -88,7 +92,13 @@ public class AssignmentASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(IdentifierExpression node) throws ASTVisitorException {
-        //nothing
+        SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+        Type exprType = ASTUtils.getSafeType(value);
+
+        value.accept(bCGenerator);
+        ByteCodeUtils.widen(symEntry.getType(),exprType,mn);
+        
+        mn.instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex())); 
     }
 
     @Override
@@ -169,16 +179,22 @@ public class AssignmentASTVisitor implements ASTVisitor {
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         
-        // String t = createTemp();
-        // Type type = ASTUtils.getType(node);
-        // String type_size = String.valueOf(type.getSize()*4);
-        // node.getIndex().accept(this);
-        // String i = stack.pop();
-        // String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
-        // arr = arr + "." + t;
+        SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+        Type exprType = ASTUtils.getSafeType(value);
+
+
+
         
-        // program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,i,t));
-        // stack.push(arr);
+        
+        //LOAD ARRREFERENCE TO STACK
+        mn.instructions.add(new VarInsnNode(Opcodes.ALOAD,symEntry.getIndex()));
+        // //LOAD INDEX TO STACK
+        node.getIndex().accept(bCGenerator);
+        //LOAD VALUE TO STACK
+        value.accept(bCGenerator);
+        
+        //ADD AASTORE
+        mn.instructions.add(new InsnNode(Opcodes.AASTORE));
     }
 
     @Override

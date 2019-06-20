@@ -30,10 +30,12 @@ import org.objectweb.asm.tree.*;
 
 public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
+    private MethodNode initMn;
     private ClassNode cn;
-    private MethodNode mn;
+    
 
     private final Deque<MethodNode> mnStack;
+    private final Deque<ClassNode> cnStack;
 
     public BytecodeGeneratorASTVisitor() {
         // create class
@@ -44,18 +46,20 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         cn.sourceFile = "Test.in";
         cn.superName = "java/lang/Object";
 
-        mnStack = new ArrayDeque<MethodNode>() ;
+        mnStack = new ArrayDeque<MethodNode>();
+        cnStack = new ArrayDeque<ClassNode>();
+        
 
         // create constructor
         //kainourgio method node gia kathe sinartisi
-        mn = new MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
-        mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
-        mn.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V"));
-        mn.instructions.add(new InsnNode(Opcodes.RETURN));
-        mn.maxLocals = 100;
-        mn.maxStack = 100;
+        initMn = new MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+        initMn.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        initMn.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V"));
+        initMn.instructions.add(new InsnNode(Opcodes.RETURN));
+        initMn.maxLocals = 100;
+        initMn.maxStack = 100;
         
-        cn.methods.add(mn);
+        cn.methods.add(initMn);
 
     }
     
@@ -80,43 +84,45 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         }
         backpatchNextList(d);
 
-        mn.maxLocals = ASTUtils.getSafeLocalIndexPool(node).getMaxLocals() + 100;
+        initMn.maxLocals = ASTUtils.getSafeLocalIndexPool(node).getMaxLocals() + 100;
 
     }
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        node.getResult().accept(this);
-        Type exprType = ASTUtils.getSafeType(node.getResult());
+        // node.getResult().accept(this);
+        // Type exprType = ASTUtils.getSafeType(node.getResult());
 
-        Expression target = node.getTarget();
-        SymTableEntry symEntry = null;
+        // Expression target = node.getTarget();
+        // SymTableEntry symEntry = null;
 
-        if(target instanceof IdentifierExpression){
+        // if(target instanceof IdentifierExpression){
 
             
-            IdentifierExpression t =  (IdentifierExpression) target;
-            symEntry = ASTUtils.getSafeSymbolTable(node).lookup(t.getIdentifier());
-        }else if(target instanceof ArrayAccessExpression){
-            ArrayAccessExpression t = (ArrayAccessExpression) target;
-            symEntry = null;
-        }else if(target instanceof StructVariableAccessExpression){
-            StructVariableAccessExpression t = (StructVariableAccessExpression) target;
-            symEntry = null;
-        }else if(target instanceof StructArrayAccessExpression){
-            StructArrayAccessExpression t = (StructArrayAccessExpression) target;
-            symEntry = null;
-        }else{
-            ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
-        }
+        //     IdentifierExpression t =  (IdentifierExpression) target;
+        //     symEntry = ASTUtils.getSafeSymbolTable(node).lookup(t.getIdentifier());
+        // }else if(target instanceof ArrayAccessExpression){
+        //     ArrayAccessExpression t = (ArrayAccessExpression) target;
+        //     symEntry = null;
+        // }else if(target instanceof StructVariableAccessExpression){
+        //     StructVariableAccessExpression t = (StructVariableAccessExpression) target;
+        //     symEntry = null;
+        // }else if(target instanceof StructArrayAccessExpression){
+        //     StructArrayAccessExpression t = (StructArrayAccessExpression) target;
+        //     symEntry = null;
+        // }else{
+        //     ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
+        // }
 
-        if(symEntry == null)
-            ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
+        // if(symEntry == null)
+        //     ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
             
-            ByteCodeUtils.widen(symEntry.getType(),exprType,mnStack.element());
+        //     ByteCodeUtils.widen(symEntry.getType(),exprType,mnStack.element());
         
-            mnStack.element().instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
+        //     mnStack.element().instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
 
+        AssignmentASTVisitor visitor = new AssignmentASTVisitor(this,node.getResult(),mnStack.element());
+        node.getTarget().accept(visitor);
     }
 
     @Override
@@ -168,7 +174,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             }
             
         } else if (maxType.equals(TypeUtils.STRING_TYPE)) {
-            mn.instructions.add(new InsnNode(Opcodes.SWAP));
+            mnStack.element().instructions.add(new InsnNode(Opcodes.SWAP));
             ByteCodeUtils.handleStringOperator(node, node.getOperator(),mnStack.element());
         } else {
             ByteCodeUtils.handleNumberOperator(node, node.getOperator(), maxType,mnStack.element());
@@ -332,7 +338,11 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     public void visit(Array node) throws ASTVisitorException {
         mnStack.element().instructions.add(new LdcInsnNode(node.getLength()));
         SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
-        mnStack.element().instructions.add(new MultiANewArrayInsnNode(entry.getType().getDescriptor(),1));
+        Type elementType = entry.getType().getElementType();
+
+        mnStack.element().instructions.add(new TypeInsnNode(Opcodes.ANEWARRAY,Type.getType(Integer.class).getInternalName()));
+        
+
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
     }
 
@@ -388,6 +398,9 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(StructDefinition node) throws ASTVisitorException {
+        ClassNode structClass = new ClassNode();
+        structClass.access = Opcodes.ACC_PUBLIC;
+        structClass.version = Opcodes.V1_5;
         // nothing
     }
 
