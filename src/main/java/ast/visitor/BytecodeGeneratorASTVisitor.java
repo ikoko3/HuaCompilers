@@ -90,36 +90,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        // node.getResult().accept(this);
-        // Type exprType = ASTUtils.getSafeType(node.getResult());
-
-        // Expression target = node.getTarget();
-        // SymTableEntry symEntry = null;
-
-        // if(target instanceof IdentifierExpression){
-
-            
-        //     IdentifierExpression t =  (IdentifierExpression) target;
-        //     symEntry = ASTUtils.getSafeSymbolTable(node).lookup(t.getIdentifier());
-        // }else if(target instanceof ArrayAccessExpression){
-        //     ArrayAccessExpression t = (ArrayAccessExpression) target;
-        //     symEntry = null;
-        // }else if(target instanceof StructVariableAccessExpression){
-        //     StructVariableAccessExpression t = (StructVariableAccessExpression) target;
-        //     symEntry = null;
-        // }else if(target instanceof StructArrayAccessExpression){
-        //     StructArrayAccessExpression t = (StructArrayAccessExpression) target;
-        //     symEntry = null;
-        // }else{
-        //     ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
-        // }
-
-        // if(symEntry == null)
-        //     ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
-            
-        //     ByteCodeUtils.widen(symEntry.getType(),exprType,mnStack.element());
-        
-        //     mnStack.element().instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
 
         AssignmentASTVisitor visitor = new AssignmentASTVisitor(this,node.getResult(),mnStack.element());
         node.getTarget().accept(visitor);
@@ -340,9 +310,9 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
         Type elementType = entry.getType().getElementType();
 
-        mnStack.element().instructions.add(new TypeInsnNode(Opcodes.ANEWARRAY,Type.getType(Integer.class).getInternalName()));
+        //mnStack.element().instructions.add(new TypeInsnNode(Opcodes.ANEWARRAY,Type.getType(Integer.class).getInternalName()));
+        mnStack.element().instructions.add(new VarInsnNode(Opcodes.NEWARRAY,10));
         
-
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
     }
 
@@ -406,17 +376,15 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
+        SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+        Type exprType = ASTUtils.getSafeType(node.getIndex());
+
+        //LOAD ARRREFERENCE TO STACK
+        mnStack.element().instructions.add(new VarInsnNode(Opcodes.ALOAD,symEntry.getIndex()));
+        node.getIndex().accept(this);
+
         
-        // String t = createTemp();
-        // Type type = ASTUtils.getType(node);
-        // String type_size = String.valueOf(type.getSize()*4);
-        // node.getIndex().accept(this);
-        // String i = stack.pop();
-        // String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
-        // arr = arr + "." + t;
-        
-        // program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,i,t));
-        // stack.push(arr);
+        mnStack.element().instructions.add(new InsnNode(exprType.getOpcode(Opcodes.IALOAD)));
     }
 
     @Override

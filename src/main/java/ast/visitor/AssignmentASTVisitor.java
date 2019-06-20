@@ -183,9 +183,6 @@ public class AssignmentASTVisitor implements ASTVisitor {
         Type exprType = ASTUtils.getSafeType(value);
 
 
-
-        
-        
         //LOAD ARRREFERENCE TO STACK
         mn.instructions.add(new VarInsnNode(Opcodes.ALOAD,symEntry.getIndex()));
         // //LOAD INDEX TO STACK
@@ -194,7 +191,7 @@ public class AssignmentASTVisitor implements ASTVisitor {
         value.accept(bCGenerator);
         
         //ADD AASTORE
-        mn.instructions.add(new InsnNode(Opcodes.AASTORE));
+        mn.instructions.add(new InsnNode(exprType.getOpcode(Opcodes.IASTORE)));
     }
 
     @Override
