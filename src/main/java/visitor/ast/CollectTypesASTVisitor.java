@@ -1,4 +1,4 @@
-package ast.visitor;
+package visitor.ast;
 
 /**
  * This code is part of the lab exercises for the Compilers course at Harokopio
@@ -20,6 +20,7 @@ import symbol.SymTable;
 import symbol.SymTableEntry;
 import types.exception.*;
 import types.TypeUtils;
+import visitor.statement.HasReturnASTVisitor;
 
 /**
  * Build symbol tables for each node of the AST.

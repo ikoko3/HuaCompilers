@@ -6,19 +6,20 @@ float myFunc(int i,float t) {
 
 void main() {
 	int max;
-	max =50;
+	max =10;
 	int arr[50];
+
+	char str[4];
+	str[0] = 't';
+	str[1] = 'e';
+	str[2] = 's';
+	str[3] = 't';
 	
 	int i;
-	i=0;
-	while( i < max ){
-		arr[i] = i;
-		i = i+1;
-	}
 
 	i=0;
-	while( i < max ){
-		print(arr[i]);
+	while(i < 4){
+		print(str[i]);
 		i = i+1;
 	}
 }

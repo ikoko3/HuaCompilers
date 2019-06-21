@@ -5,6 +5,10 @@
 package ast.expression;
 
 import ast.ASTNode;
+import visitor.ast.ASTVisitorException;
+import visitor.expression.ExpressionVisitor;
 
 public abstract class Expression extends ASTNode {
+    
+    public abstract void accept(ExpressionVisitor visitor) throws ASTVisitorException;
 }

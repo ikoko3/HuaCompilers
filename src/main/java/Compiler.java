@@ -1,6 +1,10 @@
 
+import visitor.ast.SymTableBuilderASTVisitor;
+import visitor.ast.CollectSymbolsASTVisitor;
+import visitor.ast.LocalIndexBuilderASTVisitor;
+import visitor.ast.BytecodeGeneratorASTVisitor;
+import visitor.ast.CollectTypesASTVisitor;
 import core.Registry;
-import ast.visitor.*;
 import ast.ASTNode;
 import core.ReloadingClassLoader;
 import java.io.FileOutputStream;

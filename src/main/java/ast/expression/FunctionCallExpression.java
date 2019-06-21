@@ -5,11 +5,12 @@
  */
 package ast.expression;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitor;
+import visitor.ast.ASTVisitorException;
 
 import java.util.ArrayList;
 import java.util.List;
+import visitor.expression.ExpressionVisitor;
 
 /**
  *
@@ -56,5 +57,8 @@ public class FunctionCallExpression extends Expression{
     public void accept(ASTVisitor visitor) throws ASTVisitorException {
         visitor.visit(this);
     }
-    
+    @Override
+    public void accept(ExpressionVisitor visitor) throws ASTVisitorException{
+        visitor.visit(this);
+    }
 }

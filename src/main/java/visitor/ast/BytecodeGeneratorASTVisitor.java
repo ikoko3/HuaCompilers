@@ -2,7 +2,7 @@
  * This code is part of the lab exercises for the Compilers course at Harokopio
  * University of Athens, Dept. of Informatics and Telematics.
  */
-package ast.visitor;
+package visitor.ast;
 
 import ast.definition.ParameterDeclaration;
 import java.util.ArrayDeque;
@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import visitor.expression.AssignmentASTVisitor;
 
 
 public class BytecodeGeneratorASTVisitor implements ASTVisitor {
@@ -311,7 +312,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         Type elementType = entry.getType().getElementType();
 
         //mnStack.element().instructions.add(new TypeInsnNode(Opcodes.ANEWARRAY,Type.getType(Integer.class).getInternalName()));
-        mnStack.element().instructions.add(new VarInsnNode(Opcodes.NEWARRAY,10));
+        mnStack.element().instructions.add(new VarInsnNode(Opcodes.NEWARRAY,getT_Type(elementType)));
         
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
     }
@@ -377,14 +378,15 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+
+        Type arrType = symEntry.getType().getElementType();
         Type exprType = ASTUtils.getSafeType(node.getIndex());
 
         //LOAD ARRREFERENCE TO STACK
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.ALOAD,symEntry.getIndex()));
         node.getIndex().accept(this);
 
-        
-        mnStack.element().instructions.add(new InsnNode(exprType.getOpcode(Opcodes.IALOAD)));
+        mnStack.element().instructions.add(new InsnNode(arrType.getOpcode(Opcodes.IALOAD)));
     }
 
     @Override
@@ -528,10 +530,20 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         }
     }
 
-    /**
-     * Cast the top of the stack to a particular type
-     */
-   
+    private int getT_Type(Type type) throws ASTVisitorException{
+        switch(type.getSort()){
+            case Type.INT:
+                return Opcodes.T_INT;
+            case Type.FLOAT:
+                return Opcodes.T_FLOAT;
+            case Type.CHAR:
+                return Opcodes.T_CHAR;
+            default:
+                throw new ASTVisitorException("Not supported type for array");
+
+        }
+
+    }
 
     private void InheritBooleanAttributes(ASTNode parent, Expression node) {
         if (parent instanceof Expression && ASTUtils.isBooleanExpression((Expression) parent)) {

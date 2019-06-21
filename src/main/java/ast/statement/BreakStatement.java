@@ -5,8 +5,9 @@
  */
 package ast.statement;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitor;
+import visitor.ast.ASTVisitorException;
+import visitor.statement.StatementVisitor;
 
 /**
  *
@@ -16,6 +17,10 @@ public class BreakStatement extends Statement{
 
     @Override
     public void accept(ASTVisitor visitor) throws ASTVisitorException {
+        visitor.visit(this);
+    }
+    
+        public void accept(StatementVisitor visitor) throws ASTVisitorException {
         visitor.visit(this);
     }
     

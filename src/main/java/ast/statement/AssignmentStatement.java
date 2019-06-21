@@ -4,9 +4,10 @@
  */
 package ast.statement;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitorException;
 import ast.expression.Expression;
+import visitor.ast.ASTVisitor;
+import visitor.statement.StatementVisitor;
 
 public class AssignmentStatement extends Statement {
 
@@ -41,6 +42,10 @@ public class AssignmentStatement extends Statement {
     
     @Override
     public void accept(ASTVisitor visitor) throws ASTVisitorException {
+        visitor.visit(this);
+    }
+    
+    public void accept(StatementVisitor visitor) throws ASTVisitorException {
         visitor.visit(this);
     }
 

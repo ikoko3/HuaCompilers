@@ -1,6 +1,6 @@
 package ast;
 
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitorException;
 import ast.expression.Expression;
 import ast.statement.Statement;
 import java.util.ArrayList;

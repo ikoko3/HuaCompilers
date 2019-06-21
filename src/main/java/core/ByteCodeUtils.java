@@ -11,7 +11,7 @@ import ast.ASTNode;
 import ast.ASTUtils;
 import ast.expression.Expression;
 import ast.expression.UnaryExpression;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitorException;
 import types.TypeUtils;
 
 public class ByteCodeUtils{

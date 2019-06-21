@@ -4,10 +4,11 @@
  */
 package ast.statement;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitor;
+import visitor.ast.ASTVisitorException;
 import java.util.ArrayList;
 import java.util.List;
+import visitor.statement.StatementVisitor;
 
 public class CompoundStatement extends Statement {
 
@@ -31,6 +32,10 @@ public class CompoundStatement extends Statement {
 
     @Override
     public void accept(ASTVisitor visitor) throws ASTVisitorException {
+        visitor.visit(this);
+    }
+    
+        public void accept(StatementVisitor visitor) throws ASTVisitorException {
         visitor.visit(this);
     }
 

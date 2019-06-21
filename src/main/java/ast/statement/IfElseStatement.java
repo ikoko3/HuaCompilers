@@ -5,9 +5,10 @@
  */
 package ast.statement;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitor;
+import visitor.ast.ASTVisitorException;
 import ast.expression.Expression;
+import visitor.statement.StatementVisitor;
 
 /**
  *
@@ -42,4 +43,7 @@ public class IfElseStatement extends IfStatement{
         visitor.visit(this);
     }
     
+        public void accept(StatementVisitor visitor) throws ASTVisitorException {
+        visitor.visit(this);
+    }
 }

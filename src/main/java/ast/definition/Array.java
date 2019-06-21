@@ -5,8 +5,8 @@
  */
 package ast.definition;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitor;
+import visitor.ast.ASTVisitorException;
 import org.objectweb.asm.Type;
 
 /**

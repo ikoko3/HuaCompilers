@@ -5,8 +5,9 @@
  */
 package ast.definition;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitor;
+import visitor.ast.ASTVisitorException;
+import visitor.statement.StatementVisitor;
 
 /**
  *
@@ -39,4 +40,8 @@ public class VariableDefinition extends Definition{
         visitor.visit(this);
     }
     
+    @Override
+    public void accept(StatementVisitor visitor) throws ASTVisitorException {
+        visitor.visit(this);
+    }
 }

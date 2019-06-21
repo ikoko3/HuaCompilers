@@ -1,4 +1,4 @@
-package ast.visitor;
+package visitor.ast;
 
 /**
  * This code is part of the lab exercises for the Compilers course at Harokopio
@@ -6,246 +6,293 @@ package ast.visitor;
  * University of Athens, Dept. of Informatics and Telematics.
  */
 
+import core.Registry;
 import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
-import java.util.ArrayDeque;
-import java.util.Deque;
+
 
 import ast.*;
-import symbol.HashSymTable;
-import symbol.SymTable;
-import symbol.SymTableEntry;
+import core.Environment;
+import org.objectweb.asm.Type;
+import symbol.*;
+import types.TypeUtils;
 
 /**
  * Build symbol tables for each node of the AST.
  */
-public class SymTableBuilderASTVisitor implements ASTVisitor {
+public class CollectSymbolsASTVisitor implements ASTVisitor {
 
-    private final Deque<SymTable<SymTableEntry>> stack;
-
-    public SymTableBuilderASTVisitor() {
-        stack = new ArrayDeque<SymTable<SymTableEntry>>();
+    public CollectSymbolsASTVisitor() {
+        
     }
 
     @Override
     public void visit(CompUnit node) throws ASTVisitorException {
-        pushEnvironment();
-        ASTUtils.setSymbolTable(node, stack.element());
+        addPrintFunctionToSymbolTable();
+        
         for (Definition d : node.getDefinitions()) {
             d.accept(this);
         }
-        
-        popEnvironment();
+        setProperties(node);
     }
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getTarget().accept(this);
         node.getResult().accept(this);
+        setProperties(node);
     }
 
 
     @Override
     public void visit(BinaryExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getExpression1().accept(this);
         node.getExpression2().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(UnaryExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getExpression().accept(this);
+        setProperties(node);
     }
 
 
     @Override
     public void visit(IdentifierExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
+        setProperties(node);
     }
 
 
     @Override
     public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
+        setProperties(node);
     }
 
     @Override
     public void visit(StringLiteralExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
+        setProperties(node);
     }
 
     @Override
     public void visit(ParenthesisExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
+
         node.getExpression().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(WhileStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getExpression().accept(this);
+        setWhileLoopState(true);
         node.getStatement().accept(this);
+        setWhileLoopState(false);
+        setProperties(node);
     }
     
     @Override
     public void visit(CompoundStatement node) throws ASTVisitorException {
-        pushEnvironment();
-        ASTUtils.setSymbolTable(node, stack.element());
         for (Statement s : node.getStatements()) {
             s.accept(this);
         }
-        popEnvironment();
+        setProperties(node);
     }
 
     
+
     @Override
     public void visit(Array node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
+        String varName = node.getName();
+        Type varType = Type.getType("["+node.getType().getDescriptor());
+
+        LocalIndexPool safeLocalIndexPool = ASTUtils.getSafeLocalIndexPool(node);
+        int localIndex = safeLocalIndexPool.getLocalIndex(node.getType());
+        
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        if(st.lookupOnlyInTop(varName) != null)
+            ASTUtils.error(node, "Dublicate array declaration: "+varName);
+        
+        st.put(varName, new SymTableEntry(varName,varType,localIndex));
+        
+        setProperties(node);
     }
 
     @Override
     public void visit(ParameterDeclaration node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getVariable().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
+        String varName = node.getName();
+        Type varType = node.getType();
+
+        LocalIndexPool safeLocalIndexPool = ASTUtils.getSafeLocalIndexPool(node);
+        int localIndex = safeLocalIndexPool.getLocalIndex(node.getType());
+        
+        SymTableEntry entry = new SymTableEntry(varName,node.getType(),localIndex);
+        
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(node);
+        if(st.lookupOnlyInTop(varName) != null)
+            ASTUtils.error(node, "Dublicate variable declaration: "+varName);
+        
+        st.put(varName, entry);
+        
+        setProperties(node);
     }
 
     @Override
     public void visit(FunctionDefinition node) throws ASTVisitorException {
-        pushEnvironment();
-        ASTUtils.setSymbolTable(node, stack.element());
-        for(ParameterDeclaration p: node.getParameters()){
+        
+        Type[] types = TypeUtils.getParameterTypesFor(node.getParameters());
+        Type functionType = Type.getMethodType(node.getReturnType(),types);
+        ASTNode root = Registry.getInstance().getRoot();
+        
+        SymTable<SymTableEntry> st = ASTUtils.getSafeSymbolTable(root);
+        if(st.lookup(node.getName()) != null)
+            ASTUtils.error(node, "Dublicate function declaration: "+node.getName());
+        
+        st.put(node.getName(), new SymTableEntry(node.getName(),functionType));
+        
+        setFunctionState(node.getName());
+        for(ParameterDeclaration p :node.getParameters()){
             p.accept(this);
         }
+        
         for(Statement s: node.getStatements()){
             s.accept(this);
-        }
-        popEnvironment();
+        }   
+        stopFunctionState();
+        setProperties(node);
     }
 
     @Override
     public void visit(StructDefinition node) throws ASTVisitorException {
-        SymTable<SymTableEntry> symTable = new HashSymTable<SymTableEntry>();
-        stack.push(symTable);
-        ASTUtils.setSymbolTable(node, stack.element());
-        
-        ASTUtils.setSymbolTable(node, stack.element());
         for(VariableDefinition v: node.getVariables()){
             v.accept(this);
        }
-        popEnvironment();
+        if(Registry.getInstance().getStructs().get(node.getName()) != null)
+            ASTUtils.error(node, "Dublicate Struct declaration: "+node.getName());
+           
+       Registry.getInstance().getStructs().put(Environment.STRUCT_TYPE_PREFIX+node.getName(), ASTUtils.getSafeSymbolTable(node));
+       setProperties(node);
     }
 
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getIndex().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(BooleanLiteralExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
-
+        setProperties(node);
     }
 
     @Override
     public void visit(CharLiteralExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
-
+        setProperties(node);
     }
 
     @Override
     public void visit(FloatLiteralExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
-
+        setProperties(node);
     }
 
     @Override
     public void visit(FunctionCallExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         for(Expression e: node.getExpressions()){
             e.accept(this);
         }
+        setProperties(node);
     }
 
 
     @Override
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getStruct().accept(this);
         node.getIndex().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getStruct().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(BreakStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
-
+        setProperties(node);
     }
 
     @Override
     public void visit(ContinueStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
-
+        setProperties(node);
     }
 
     @Override
     public void visit(EmptyStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getExpression().accept(this); 
+        setProperties(node);
     }
 
     @Override
     public void visit(IfElseStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getExpression().accept(this);
         node.getStatement().accept(this);
         node.getElseStatement().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(IfStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getExpression().accept(this);
         node.getStatement().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(ReturnStatement node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         if(node.getExpression()!=null)
             node.getExpression().accept(this);
+        setProperties(node);
     }
 
     @Override
     public void visit(VariableDefinition node) throws ASTVisitorException {
-        ASTUtils.setSymbolTable(node, stack.element());
         node.getVariable().accept(this);
+        setProperties(node);
+    }
+
+    private void setFunctionState(String functionName){
+        Registry.getInstance().setFunctionState(functionName);
+    }
+
+    private void stopFunctionState(){
+        Registry.getInstance().stopFunctionState();
     }
     
-
-    private void pushEnvironment() {
-        SymTable<SymTableEntry> oldSymTable = stack.peek();
-        SymTable<SymTableEntry> symTable = new HashSymTable<SymTableEntry>(
-                oldSymTable);
-        stack.push(symTable);
+    private void setWhileLoopState(boolean state){
+        Registry.getInstance().setInWhileLoop(state);
     }
-
-    private void popEnvironment() {
-        stack.pop();
-    }
-
     
+    
+    private void setProperties(ASTNode node){
+        ASTUtils.setWhileLoopState(node, Registry.getInstance().isInWhileLoop());
+        
+        boolean isInFunction = Registry.getInstance().isInFunctionDefinition();
+        String functionName = Registry.getInstance().getCurrentFunctionName();
+        
+        ASTUtils.setFunctionProperties(node, isInFunction, functionName);        
+    }
+    
+    private void addPrintFunctionToSymbolTable() throws ASTVisitorException{
+        SymTable<SymTableEntry>  rootSymbolTable = ASTUtils.getSafeSymbolTable(Registry.getInstance().getRoot());
+        Type functionType = Type.getMethodType(Type.VOID_TYPE,Type.getType(Object.class));
+        
+        rootSymbolTable.put(Environment.PRINT_FUNCTION, new SymTableEntry(Environment.PRINT_FUNCTION,functionType));
+    }
 }

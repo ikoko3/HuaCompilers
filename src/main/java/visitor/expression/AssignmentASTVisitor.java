@@ -2,8 +2,11 @@
  * This code is part of the lab exercises for the Compilers course at Harokopio
  * University of Athens, Dept. of Informatics and Telematics.
  */
-package ast.visitor;
+package visitor.expression;
 
+import visitor.ast.ASTVisitorException;
+import visitor.ast.BytecodeGeneratorASTVisitor;
+import visitor.ast.ASTVisitor;
 import ast.definition.ParameterDeclaration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -28,7 +31,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
 
-public class AssignmentASTVisitor implements ASTVisitor {
+public class AssignmentASTVisitor implements ExpressionVisitor {
 
     private MethodNode mn;
     private Expression value;
@@ -40,46 +43,9 @@ public class AssignmentASTVisitor implements ASTVisitor {
         this.mn = mn;
     }
 
-    @Override
-    public void visit(CompUnit node) throws ASTVisitorException {
-        //nothing
-    }
+   
 
-    @Override
-    public void visit(AssignmentStatement node) throws ASTVisitorException {
-        node.getResult().accept(this);
-        Type exprType = ASTUtils.getSafeType(node.getResult());
-
-        Expression target = node.getTarget();
-        SymTableEntry symEntry = null;
-
-        if(target instanceof IdentifierExpression){
-
-            ByteCodeUtils.widen(symEntry.getType(),exprType,mn);
-        
-        mn.instructions.add(new VarInsnNode(symEntry.getType().getOpcode(Opcodes.ISTORE), symEntry.getIndex()));
-            IdentifierExpression t =  (IdentifierExpression) target;
-            symEntry = ASTUtils.getSafeSymbolTable(node).lookup(t.getIdentifier());
-        }else if(target instanceof ArrayAccessExpression){
-            ArrayAccessExpression t = (ArrayAccessExpression) target;
-            symEntry = null;
-        }else if(target instanceof StructVariableAccessExpression){
-            StructVariableAccessExpression t = (StructVariableAccessExpression) target;
-            symEntry = null;
-        }else if(target instanceof StructArrayAccessExpression){
-            StructArrayAccessExpression t = (StructArrayAccessExpression) target;
-            symEntry = null;
-        }else{
-            ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
-        }
-
-        if(symEntry == null)
-            ASTUtils.error(node, "Assignment is not implemented for the type "+target.getClass());
-            
-        
-
-    }
-
+ 
     @Override
     public void visit(BinaryExpression node) throws ASTVisitorException {
         //nothing
@@ -122,64 +88,10 @@ public class AssignmentASTVisitor implements ASTVisitor {
     }
 
     @Override
-    public void visit(WhileStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(IfStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(IfElseStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(BreakStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(ContinueStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(CompoundStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(Array node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(ParameterDeclaration node) throws ASTVisitorException {
-        //nothing   
-    }
-
-    @Override
-    public void visit(Variable node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(FunctionDefinition node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(StructDefinition node) throws ASTVisitorException {
-        // nothing
-    }
-
-    @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         
         SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
+        Type arrType = symEntry.getType().getElementType();
         Type exprType = ASTUtils.getSafeType(value);
 
 
@@ -190,8 +102,9 @@ public class AssignmentASTVisitor implements ASTVisitor {
         //LOAD VALUE TO STACK
         value.accept(bCGenerator);
         
+        ByteCodeUtils.widen(arrType,exprType,mn);
         //ADD AASTORE
-        mn.instructions.add(new InsnNode(exprType.getOpcode(Opcodes.IASTORE)));
+        mn.instructions.add(new InsnNode(arrType.getOpcode(Opcodes.IASTORE)));
     }
 
     @Override
@@ -252,21 +165,6 @@ public class AssignmentASTVisitor implements ASTVisitor {
 
         // stack.push(struct_var);
 
-    }
-
-    @Override
-    public void visit(EmptyStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(ReturnStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(VariableDefinition node) throws ASTVisitorException {
-        node.getVariable().accept(this);
     }
 
 }

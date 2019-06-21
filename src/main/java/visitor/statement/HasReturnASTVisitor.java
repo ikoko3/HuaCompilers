@@ -1,5 +1,7 @@
-package ast.visitor;
+package visitor.statement;
 
+import visitor.ast.ASTVisitorException;
+import visitor.ast.ASTVisitor;
 import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
@@ -10,7 +12,7 @@ import java.util.List;
 /**
  * Check if the a set of statements have a return statement.
  */
-public class HasReturnASTVisitor implements ASTVisitor {
+public class HasReturnASTVisitor implements StatementVisitor {
 
     private Boolean stContsReturn = false;
 
@@ -22,46 +24,9 @@ public class HasReturnASTVisitor implements ASTVisitor {
         
     }
 
-    @Override
-    public void visit(CompUnit node) throws ASTVisitorException {
-        //nothing
-    }
 
     @Override
     public void visit(AssignmentStatement node) throws ASTVisitorException {
-        //nothing
-    }
-
-
-    @Override
-    public void visit(BinaryExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(UnaryExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-
-    @Override
-    public void visit(IdentifierExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-
-    @Override
-    public void visit(IntegerLiteralExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(StringLiteralExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(ParenthesisExpression node) throws ASTVisitorException {
         //nothing
     }
 
@@ -73,67 +38,6 @@ public class HasReturnASTVisitor implements ASTVisitor {
     @Override
     public void visit(CompoundStatement node) throws ASTVisitorException {
         HandleStatements(node,node.getStatements());
-    }
-
-    @Override
-    public void visit(Array node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(ParameterDeclaration node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(Variable node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(FunctionDefinition node) throws ASTVisitorException {
-        HandleStatements(node,node.getStatements());
-    }
-
-    @Override
-    public void visit(StructDefinition node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(ArrayAccessExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(BooleanLiteralExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(CharLiteralExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(FloatLiteralExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(FunctionCallExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-
-    @Override
-    public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
-        //nothing
-    }
-
-    @Override
-    public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
-        //nothing
     }
 
     @Override
@@ -170,6 +74,17 @@ public class HasReturnASTVisitor implements ASTVisitor {
     public void visit(VariableDefinition node) throws ASTVisitorException {
         //nothing
     }
+    
+    @Override
+    public void visit(FunctionDefinition node) throws ASTVisitorException {
+        HandleStatements(node,node.getStatements());
+    }
+
+    @Override
+    public void visit(StructDefinition node) throws ASTVisitorException {
+        //nothing
+    }
+
 
     private void HandleStatements(ASTNode node,List<Statement> statements) throws ASTVisitorException{
         for(Statement st : statements){

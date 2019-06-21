@@ -5,13 +5,14 @@
  */
 package ast.definition;
 
-import ast.visitor.ASTVisitor;
-import ast.visitor.ASTVisitorException;
+import visitor.ast.ASTVisitor;
+import visitor.ast.ASTVisitorException;
 import ast.statement.Statement;
 import java.lang.reflect.Parameter;
 import java.util.List;
 
 import org.objectweb.asm.Type;
+import visitor.statement.StatementVisitor;
 
 /**
  *
@@ -68,6 +69,10 @@ public class FunctionDefinition extends Definition{
     
     @Override
     public void accept(ASTVisitor visitor) throws ASTVisitorException {
+        visitor.visit(this);
+    }
+    @Override
+    public void accept(StatementVisitor visitor) throws ASTVisitorException {
         visitor.visit(this);
     }
     
