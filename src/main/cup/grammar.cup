@@ -181,7 +181,7 @@ TypeSpecifier ::= CHAR:c
             :}
             | STRUCT IDENTIFIER:id 
             {:
-                RESULT = Type.getType(Environment.STRUCT_TYPE_PREFIX+id);
+                RESULT = Type.getType(id);
             :}
             ;
 

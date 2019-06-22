@@ -176,7 +176,7 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         if(Registry.getInstance().getStructs().get(node.getName()) != null)
             ASTUtils.error(node, "Dublicate Struct declaration: "+node.getName());
            
-       Registry.getInstance().getStructs().put(Environment.STRUCT_TYPE_PREFIX+node.getName(), ASTUtils.getSafeSymbolTable(node));
+       Registry.getInstance().getStructs().put(node.getName(), ASTUtils.getSafeSymbolTable(node));
        setProperties(node);
     }
 
@@ -293,6 +293,6 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
         SymTable<SymTableEntry>  rootSymbolTable = ASTUtils.getSafeSymbolTable(Registry.getInstance().getRoot());
         Type functionType = Type.getMethodType(Type.VOID_TYPE,Type.getType(Object.class));
         
-        rootSymbolTable.put(Environment.PRINT_FUNCTION, new SymTableEntry(Environment.PRINT_FUNCTION,functionType));
+        rootSymbolTable.put(Environment.PRINT_FN_ID, new SymTableEntry(Environment.PRINT_FN_ID,functionType));
     }
 }

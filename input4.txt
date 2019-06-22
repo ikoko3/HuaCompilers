@@ -3,24 +3,16 @@ float myFunc(int i,float t) {
 	return i + t;
 }
 
+struct myStruct{
+	int x;
+};
+
+struct s1{
+	float d;
+};
 
 void main() {
-	int max;
-	max =10;
-	int arr[50];
-
-	char str[4];
-	str[0] = 't';
-	str[1] = 'e';
-	str[2] = 's';
-	str[3] = 't';
-	
-	int i;
-
-	i=0;
-	while(i < 4){
-		print(str[i]);
-		i = i+1;
-	}
+	struct myStruct ms;
+	struct s1 tt;
 }
 

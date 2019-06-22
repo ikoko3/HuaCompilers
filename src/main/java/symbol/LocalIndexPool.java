@@ -35,13 +35,7 @@ public class LocalIndexPool {
                 || type.equals(Type.CHAR_TYPE)) {
             return getLocalIndex();
         } else if(TypeUtils.isStructType(type)){
-
-            //handle stuct variable declaration here
-            //find struct fields from registry
-            //Call recursively getLocalIndex for all the fields.
-            //Count their size and reurn it.
-
-            return 0;
+            return getLocalIndex();
         }
         else {
             throw new IllegalArgumentException("Not supported type " + type);

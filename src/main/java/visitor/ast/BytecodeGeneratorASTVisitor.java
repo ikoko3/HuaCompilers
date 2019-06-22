@@ -16,8 +16,7 @@ import ast.*;
 import ast.definition.*;
 import ast.expression.*;
 import ast.statement.*;
-import core.ByteCodeUtils;
-import core.Operator;
+import core.*;
 import symbol.SymTable;
 import symbol.SymTableEntry;
 
@@ -36,19 +35,19 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     
 
     private final Deque<MethodNode> mnStack;
-    private final Deque<ClassNode> cnStack;
+    private final List<ClassNode> structsList;
 
     public BytecodeGeneratorASTVisitor() {
         // create class
         cn = new ClassNode();
         cn.access = Opcodes.ACC_PUBLIC;
         cn.version = Opcodes.V1_5;
-        cn.name = "Test";
-        cn.sourceFile = "Test.in";
+        cn.name = Environment.PROGRAM_NAME;
+        cn.sourceFile = Environment.PROGRAM_NAME + Environment.IN_FILE_EXTENSION;
         cn.superName = "java/lang/Object";
 
         mnStack = new ArrayDeque<MethodNode>();
-        cnStack = new ArrayDeque<ClassNode>();
+        structsList = new ArrayList<ClassNode>();
         
 
         // create constructor
@@ -64,6 +63,11 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     }
     
+    public List<ClassNode> getStructsList(){
+        return structsList;
+    } 
+
+
     public ClassNode getClassNode() {
         return cn;
     }
@@ -81,12 +85,10 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             backpatchNextList(pd);
             d.accept(this);
 
-            //IF statement is while -> add label backpatch break, continue
         }
         backpatchNextList(d);
 
         initMn.maxLocals = ASTUtils.getSafeLocalIndexPool(node).getMaxLocals() + 100;
-
     }
 
     @Override
@@ -98,6 +100,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(BinaryExpression node) throws ASTVisitorException {
+
         Type expr1Type = ASTUtils.getSafeType(node.getExpression1());
         Type expr2Type = ASTUtils.getSafeType(node.getExpression2());
         Type maxType = TypeUtils.maxType(expr1Type, expr2Type);
@@ -154,16 +157,17 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(UnaryExpression node) throws ASTVisitorException {
+
         InheritBooleanAttributes(node, node.getExpression());
         node.getExpression().accept(this);
         Type exprType = ASTUtils.getSafeType(node.getExpression());
 
         ByteCodeUtils.handleUnaryOperator(node,node.getOperator(),exprType,mnStack.element());
-
     }
 
     @Override
     public void visit(IdentifierExpression node) throws ASTVisitorException {
+
         SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
         mnStack.element().instructions.add(new VarInsnNode((symEntry.getType().getOpcode(Opcodes.ILOAD)), symEntry.getIndex()));
     }
@@ -173,7 +177,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         Float d = node.getLiteral();
         mnStack.element().instructions.add(new LdcInsnNode(d));
-
     }
 
     @Override
@@ -233,9 +236,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         backpatch(ASTUtils.getTrueList(node.getExpression()), labelNode);
 
         node.getStatement().accept(this);
-
-        ASTUtils.getBreakList(node).addAll(ASTUtils.getBreakList(node.getStatement()));
-        ASTUtils.getContinueList(node).addAll(ASTUtils.getContinueList(node.getStatement()));
 
         ASTUtils.getNextList(node).addAll(ASTUtils.getFalseList(node.getExpression()));
         ASTUtils.getNextList(node).addAll(ASTUtils.getNextList(node.getStatement()));
@@ -311,7 +311,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
         Type elementType = entry.getType().getElementType();
 
-        //mnStack.element().instructions.add(new TypeInsnNode(Opcodes.ANEWARRAY,Type.getType(Integer.class).getInternalName()));
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.NEWARRAY,getT_Type(elementType)));
         
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
@@ -324,6 +323,13 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Variable node) throws ASTVisitorException {
+        SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
+        if(TypeUtils.isStructType(entry.getType())){
+
+            String classDescr = entry.getType().getInternalName();
+            mnStack.element().instructions.add(new TypeInsnNode(Opcodes.NEW, classDescr));
+            mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
+        }
 
     }
 
@@ -332,13 +338,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
         MethodNode fmn = new MethodNode(Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC, node.getName(),entry.getType().getDescriptor(), null, null);
         mnStack.push(fmn);
-
-        for (ParameterDeclaration p : node.getParameters()) {
-            //p.accept(this);
-            //String t = stack.pop();
-            //String t1 = createTemp();
-            //stack.push(t1);
-        }
 
         Statement ps,s=null;
         Iterator<Statement> it = node.getStatements().iterator();
@@ -353,12 +352,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         backpatchNextList(s);
         mnStack.pop();
         fmn.maxLocals = ASTUtils.getSafeLocalIndexPool(node).getMaxLocals() + 1;
-        
-
-        // IMPORTANT: this should be dynamically calculated
-        // use COMPUTE_MAXS when computing the ClassWriter,
-        // e.g. new ClassWriter(ClassWriter.COMPUTE_MAXS)
-        //fmn.maxStack = 32;
 
         if(ASTUtils.getSafeType(node).equals(Type.VOID_TYPE)){
             fmn.instructions.add(new InsnNode(Opcodes.RETURN));
@@ -372,15 +365,25 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         ClassNode structClass = new ClassNode();
         structClass.access = Opcodes.ACC_PUBLIC;
         structClass.version = Opcodes.V1_5;
-        // nothing
+        structClass.name = node.getName();
+        structClass.sourceFile = node.getName() + Environment.IN_FILE_EXTENSION;
+        structClass.superName = "java/lang/Object";
+
+        for (VariableDefinition vardef : node.getVariables()) {
+            Variable sVar = vardef.getVariable();
+            SymTableEntry entry = ASTUtils.getSafeSymbolTable(sVar).lookup(sVar.getName());
+
+            FieldNode fd = new FieldNode(Opcodes.ACC_PUBLIC,sVar.getName(),entry.getType().getDescriptor(),null,null);
+            structClass.fields.add(fd);
+        }
+
+        structsList.add(structClass);
     }
 
     @Override
     public void visit(ArrayAccessExpression node) throws ASTVisitorException {
         SymTableEntry symEntry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
-
         Type arrType = symEntry.getType().getElementType();
-        Type exprType = ASTUtils.getSafeType(node.getIndex());
 
         //LOAD ARRREFERENCE TO STACK
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.ALOAD,symEntry.getIndex()));
@@ -399,18 +402,13 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         char d = node.getExpression();
         mnStack.element().instructions.add(new LdcInsnNode(d));
-        // String t = createTemp();
-        // stack.push(t);
-        // program.add(new AssignInstr(t,"\'" + node.getExpression() + "\'"));
     }
 
     @Override
     public void visit(FunctionCallExpression node) throws ASTVisitorException {
 
         //TO DO: FIX FOR COMPLEX FUNCTIONS
-        List<String> params = new ArrayList<String>();
-         
-        if(!node.getIdentifier().equals("print")){
+        if(!node.getIdentifier().equals(Environment.PRINT_FN_ID)){
             SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getIdentifier());
             int i=0;
 
@@ -421,19 +419,17 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
                 i++;
             }
             
-            
-            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,"Test", node.getIdentifier(), entry.getType().getDescriptor()));
+            mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, Environment.PROGRAM_NAME, node.getIdentifier(), entry.getType().getDescriptor()));
 
         }else {
             //In the print function we know that there is only 1 parameter.
             Expression expr = node.getExpressions().get(0);
             
-            
             mnStack.element().instructions.add(new FieldInsnNode(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"));
             Type pType = ASTUtils.getSafeType(expr) ;
             expr.accept(this);
+
             mnStack.element().instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "("+pType.getDescriptor()+")V"));
-    
         }
         
     }
@@ -540,7 +536,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
                 return Opcodes.T_CHAR;
             default:
                 throw new ASTVisitorException("Not supported type for array");
-
         }
 
     }
@@ -552,6 +547,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     }
 
     private void inheritWhileLists(Statement parent, Statement child){
+        
         ASTUtils.getBreakList(parent).addAll(ASTUtils.getBreakList(child));
         ASTUtils.getContinueList(parent).addAll(ASTUtils.getContinueList(child));
     }

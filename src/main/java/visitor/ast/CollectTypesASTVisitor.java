@@ -180,8 +180,6 @@ public class CollectTypesASTVisitor implements ASTVisitor {
                 ASTUtils.error(node, "The function "+node.getName()+" must return a variable of type "+node.getReturnType().getClassName());
         }
                 
-        
-        
         ASTUtils.setType(node, Type.VOID_TYPE);
     }
 

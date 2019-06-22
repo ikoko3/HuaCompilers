@@ -10,7 +10,12 @@ package core;
  * @author john_
  */
 public class Environment {
-    public static final String PRINT_FUNCTION = "print";
+    public static final String PRINT_FN_ID = "print";
     public static final String MAIN_FUNCTION = "main";
-    public static final String STRUCT_TYPE_PREFIX = "struct/";
+    public static final String STRUCT_PREFIX = "struct";
+
+    public static final String CLASS_FILE_EXTENSION = ".class";
+    public static final String IN_FILE_EXTENSION = ".in";
+
+    public static String PROGRAM_NAME = "Test";
 }

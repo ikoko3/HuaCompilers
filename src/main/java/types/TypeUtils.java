@@ -171,13 +171,16 @@ public class TypeUtils {
     }
 
     public static Boolean isStructType(Type type){
-        if(type.getDescriptor().contains((Environment.STRUCT_TYPE_PREFIX)))
-            return true;
+        if(type.equals(Type.INT_TYPE)
+            || type.equals(Type.FLOAT_TYPE)
+            || type.equals(Type.CHAR_TYPE)
+        )
         return false;
+        return true;
     }
 
     public static String getStructId(Type type){
-        String id = type.getDescriptor().replace(Environment.STRUCT_TYPE_PREFIX,"");
+        String id = type.getDescriptor().replace(Environment.STRUCT_PREFIX,"");
         return id;
     }
 

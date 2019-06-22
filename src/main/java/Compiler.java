@@ -4,6 +4,7 @@ import visitor.ast.CollectSymbolsASTVisitor;
 import visitor.ast.LocalIndexBuilderASTVisitor;
 import visitor.ast.BytecodeGeneratorASTVisitor;
 import visitor.ast.CollectTypesASTVisitor;
+import core.Environment;
 import core.Registry;
 import ast.ASTNode;
 import core.ReloadingClassLoader;
@@ -11,6 +12,7 @@ import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.util.TraceClassVisitor;
@@ -89,25 +91,42 @@ public class Compiler {
                     ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS + ClassWriter.COMPUTE_FRAMES);
                     TraceClassVisitor cv = new TraceClassVisitor(cw, new PrintWriter(System.out));
                     cn.accept(cv);
+
                     // get code
                     byte code[] = cw.toByteArray();
-                    
-                    String className = "Test";
-                    String outputExtension = ".class";
+
+                    LOGGER.info("Creating Struct classes.");
+                    ReloadingClassLoader rcl = new ReloadingClassLoader(ClassLoader.getSystemClassLoader());
+
+                    for(ClassNode sNode : bytecodeVisitor.getStructsList()){
+
+                        ClassWriter scw = new ClassWriter(ClassWriter.COMPUTE_MAXS + ClassWriter.COMPUTE_FRAMES);
+                        TraceClassVisitor scv = new TraceClassVisitor(scw, new PrintWriter(System.out));
+                        sNode.accept(scv);
+
+                        byte sCode[] = scw.toByteArray();
+                        String fileName = sNode.name + Environment.CLASS_FILE_EXTENSION;
+                        FileOutputStream fos = new FileOutputStream(fileName);
+                        fos.write(sCode);
+                        fos.close();
+
+                        rcl.register(sNode.name, sCode);
+                    }
 
                     // update to file
-                    LOGGER.info("Writing class to file "+className+outputExtension);
-                    FileOutputStream fos = new FileOutputStream(className+outputExtension);
+                    LOGGER.info("Writing class to file " + Environment.PROGRAM_NAME + Environment.CLASS_FILE_EXTENSION);
+                    FileOutputStream fos = new FileOutputStream(Environment.PROGRAM_NAME + Environment.CLASS_FILE_EXTENSION);
                     fos.write(code);
                     fos.close();
                     LOGGER.info("Compilation done");
 
                     // instantiate class
+                    LOGGER.info("Loading class "+ Environment.PROGRAM_NAME + Environment.CLASS_FILE_EXTENSION);
                     
-                    LOGGER.info("Loading class "+className+outputExtension);
-                    ReloadingClassLoader rcl = new ReloadingClassLoader(ClassLoader.getSystemClassLoader());
-                    rcl.register(className, code);
-                    Class<?> programClass = rcl.loadClass(className);
+                    rcl.register(Environment.PROGRAM_NAME, code);
+                    Class<?> programClass = rcl.loadClass(Environment.PROGRAM_NAME);
+
+                    //Class<?> structClass = rcl.loadClass("myStruct");
 
                     //run main method
                     Method meth = programClass.getMethod("main");
@@ -116,7 +135,7 @@ public class Compiler {
 
                     LOGGER.info("Finished execution");
                 } catch (java.io.FileNotFoundException e) {
-                    LOGGER.error("File not found : \"" + args[i] + "\"");
+                    LOGGER.error("File not found : \"" + e.getMessage() + "\"");
                 } catch (java.io.IOException e) {
                     LOGGER.error("IO error scanning file \"" + args[i] + "\"");
                     LOGGER.error(e.toString());
