@@ -17,9 +17,7 @@ import ast.*;
 import ast.definition.*;
 import ast.expression.*;
 import ast.statement.*;
-import core.Environment;
-import core.Operator;
-import core.Registry;
+import core.*;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.objectweb.asm.Type;
@@ -310,13 +308,6 @@ public class IntermediateCodeASTVisitor implements ASTVisitor {
 
         LabelInstr funcLabel = new LabelInstr(node.getName());
         program.add(funcLabel);
-
-        for (ParameterDeclaration p : node.getParameters()) {
-            //p.accept(this);
-            //String t = stack.pop();
-            //String t1 = createTemp();
-            //stack.push(t1);
-        }
 
         Statement ps,s=null;
         Iterator<Statement> it = node.getStatements().iterator();

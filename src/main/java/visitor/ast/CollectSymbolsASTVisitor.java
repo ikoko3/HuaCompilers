@@ -127,7 +127,6 @@ public class CollectSymbolsASTVisitor implements ASTVisitor {
     @Override
     public void visit(Variable node) throws ASTVisitorException {
         String varName = node.getName();
-        Type varType = node.getType();
 
         LocalIndexPool safeLocalIndexPool = ASTUtils.getSafeLocalIndexPool(node);
         int localIndex = safeLocalIndexPool.getLocalIndex(node.getType());

@@ -13,8 +13,6 @@ import ast.definition.*;
 import ast.*;
 import core.Environment;
 
-import java.util.List;
-import java.util.Map;
 import org.objectweb.asm.Type;
 import symbol.SymTable;
 import symbol.SymTableEntry;
@@ -247,6 +245,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
 
 
     @Override
+    @SuppressWarnings("unchecked")
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
         node.getStruct().accept(this);
         node.getIndex().accept(this);
@@ -261,6 +260,7 @@ public class CollectTypesASTVisitor implements ASTVisitor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
         node.getStruct().accept(this);
         Type structType = ASTUtils.getSafeType(node.getStruct());

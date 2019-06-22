@@ -6,28 +6,14 @@ package visitor.expression;
 
 import visitor.ast.ASTVisitorException;
 import visitor.ast.BytecodeGeneratorASTVisitor;
-import visitor.ast.ASTVisitor;
-import ast.definition.ParameterDeclaration;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
-import types.TypeUtils;
 import ast.*;
-import ast.definition.*;
 import ast.expression.*;
-import ast.statement.*;
 import core.ByteCodeUtils;
-import core.Environment;
-import core.Operator;
 import core.Registry;
 import symbol.SymTable;
 import symbol.SymTableEntry;
 
-import org.apache.commons.lang3.StringEscapeUtils;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -128,22 +114,21 @@ public class AssignmentASTVisitor implements ExpressionVisitor {
     @Override
     @SuppressWarnings("unchecked")
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
-
-
         //LOAD ARRAY REFERENCE
         IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
 
-        SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(expr.getIdentifier());
-        mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, entry.getIndex()));
-
-        String owner = entry.getType().getInternalName();
-        String valDesc = Type.getType("[I").getDescriptor();
-        mn.instructions.add(new FieldInsnNode(Opcodes.GETFIELD,owner,node.getIdentifier(),valDesc));
+        SymTableEntry struct = ASTUtils.getSafeSymbolTable(node).lookup(expr.getIdentifier());
+        String owner = struct.getType().getInternalName();
 
         SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);
-        SymTableEntry symEntry = structSymTable.lookup(node.getIdentifier());
-        Type arrType = symEntry.getType().getElementType();
+        SymTableEntry sField = structSymTable.lookup(node.getIdentifier());
+        Type arrType = sField.getType().getElementType();
         Type exprType = ASTUtils.getSafeType(value);
+
+        mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, struct.getIndex()));
+
+        String valDesc = sField.getType().getDescriptor();
+        mn.instructions.add(new FieldInsnNode(Opcodes.GETFIELD,owner,node.getIdentifier(),valDesc));
 
         //LOAD INDEX TO STACK
         node.getIndex().accept(bCGenerator);
@@ -167,7 +152,6 @@ public class AssignmentASTVisitor implements ExpressionVisitor {
         mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, entry.getIndex()));
         //load value
         value.accept(bCGenerator);
-
 
         String owner = entry.getType().getInternalName();
         SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);

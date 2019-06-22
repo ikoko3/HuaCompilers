@@ -1,8 +1,6 @@
 package visitor.statement;
 
 import visitor.ast.ASTVisitorException;
-import visitor.ast.ASTVisitor;
-import ast.expression.*;
 import ast.statement.*;
 import ast.definition.*;
 import ast.*;

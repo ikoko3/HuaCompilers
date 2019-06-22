@@ -1,7 +1,3 @@
-/**
- * This code is part of the lab exercises for the Compilers course at Harokopio
- * University of Athens, Dept. of Informatics and Telematics.
- */
 package visitor.ast;
 
 import ast.definition.ParameterDeclaration;
@@ -20,7 +16,6 @@ import core.*;
 import symbol.SymTable;
 import symbol.SymTableEntry;
 
-import org.apache.commons.lang3.StringEscapeUtils;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -37,6 +32,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     private final Deque<MethodNode> mnStack;
     private final List<ClassNode> structsList;
 
+    @SuppressWarnings("unchecked")
     public BytecodeGeneratorASTVisitor() {
         // create class
         cn = new ClassNode();
@@ -56,11 +52,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         initMn.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         initMn.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V"));
         initMn.instructions.add(new InsnNode(Opcodes.RETURN));
-        initMn.maxLocals = 100;
-        initMn.maxStack = 100;
-        
-        cn.methods.add(initMn);
 
+        cn.methods.add(initMn);
     }
     
     public List<ClassNode> getStructsList(){
@@ -339,6 +332,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void visit(FunctionDefinition node) throws ASTVisitorException {
         SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
         MethodNode fmn = new MethodNode(Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC, node.getName(),entry.getType().getDescriptor(), null, null);
@@ -366,6 +360,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void visit(StructDefinition node) throws ASTVisitorException {
         ClassNode structClass = new ClassNode();
         structClass.access = Opcodes.ACC_PUBLIC;
@@ -374,6 +369,11 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         structClass.sourceFile = node.getName() + Environment.IN_FILE_EXTENSION;
         structClass.superName = "java/lang/Object";
 
+        MethodNode ctor = new MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+        ctor.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        ctor.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V"));
+        
+
         for (VariableDefinition vardef : node.getVariables()) {
             Variable sVar = vardef.getVariable();
             SymTableEntry entry = ASTUtils.getSafeSymbolTable(sVar).lookup(sVar.getName());
@@ -381,8 +381,25 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             FieldNode fd = new FieldNode(Opcodes.ACC_PUBLIC,sVar.getName(),entry.getType().getDescriptor(),null,null);
             structClass.fields.add(fd);
             
+            if(sVar instanceof Array){
+                mnStack.push(ctor);
+                sVar.accept(this);
+                mnStack.pop();
+
+                //DEBUG
+                // ctor.instructions.add(new FieldInsnNode(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"));
+                // ctor.instructions.add(new InsnNode(Opcodes.DUP));
+                // ctor.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/util/Array", "toString", "()java/lang/String"));
+                // ctor.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(java/lang/String)V"));
+            }
+            
+            
         }
-        structClass.methods.add(initMn);
+        ctor.instructions.add(new InsnNode(Opcodes.RETURN));
+        ctor.maxLocals = 100;
+        ctor.maxStack = 100;
+
+        structClass.methods.add(ctor);
         structsList.add(structClass);
     }
 
@@ -441,38 +458,32 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
-        // node.getStruct().accept(this);
-       
-        // String struct_var;
-        // if(node.getStruct() instanceof IdentifierExpression){
-        //     IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-        //     struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
-        // }else{
-        //     struct_var = stack.pop();
-        // }
-        // struct_var = struct_var+"."+node.getIdentifier();
+        //LOAD ARRAY REFERENCE
+        IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
 
-        // Type type = ASTUtils.getType(node);
-        // String type_size = String.valueOf(type.getSize()*4);
+        SymTableEntry struct = ASTUtils.getSafeSymbolTable(node).lookup(expr.getIdentifier());
+        String owner = struct.getType().getInternalName();
 
-        
+        SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);
+        SymTableEntry sField = structSymTable.lookup(node.getIdentifier());
+        Type arrType = sField.getType().getElementType();
 
-        // node.getIndex().accept(this);
-        // String index = stack.pop();
-        // String address = createTemp();
-        // program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,index,address));
+        mnStack.element().instructions.add(new VarInsnNode(Opcodes.ALOAD, struct.getIndex()));
 
-        // String t1 = createTemp();
-        // program.add(new AssignInstr(t1, struct_var));
+        String valDesc = sField.getType().getDescriptor();
+        mnStack.element().instructions.add(new FieldInsnNode(Opcodes.GETFIELD,owner,node.getIdentifier(),valDesc));
 
-        // String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
-        // arr = t1 + "." + address; 
+        //LOAD INDEX TO STACK
+        node.getIndex().accept(this);
 
-        // stack.push(arr); 
+        mnStack.element().instructions.add(new InsnNode(arrType.getOpcode(Opcodes.IASTORE)));
+   
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
 
         IdentifierExpression  expr = (IdentifierExpression)node.getStruct();

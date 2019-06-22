@@ -75,7 +75,6 @@ public class ASTUtils {
         node.setProperty(LOCAL_INDEX_POOL_PROPERTY, pool);
     }
 
-    @SuppressWarnings("unchecked")
     public static LocalIndexPool getSafeLocalIndexPool(ASTNode node)
             throws ASTVisitorException {
         LocalIndexPool lip = (LocalIndexPool) node.getProperty(LOCAL_INDEX_POOL_PROPERTY);
