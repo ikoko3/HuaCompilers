@@ -16,7 +16,6 @@ import core.*;
 import symbol.SymTable;
 import symbol.SymTableEntry;
 
-
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -28,13 +27,11 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     private MethodNode initMn;
     private ClassNode cn;
     
-
     private final Deque<MethodNode> mnStack;
     private final List<ClassNode> structsList;
 
     @SuppressWarnings("unchecked")
     public BytecodeGeneratorASTVisitor() {
-        // create class
         cn = new ClassNode();
         cn.access = Opcodes.ACC_PUBLIC;
         cn.version = Opcodes.V1_5;
@@ -45,9 +42,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         mnStack = new ArrayDeque<MethodNode>();
         structsList = new ArrayList<ClassNode>();
         
-
-        // create constructor
-        //kainourgio method node gia kathe sinartisi
         initMn = new MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
         initMn.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         initMn.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V"));
@@ -320,7 +314,6 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         if(TypeUtils.isStructType(entry.getType())){
 
             String classDescr = entry.getType().getInternalName();
-
             
             mnStack.element().instructions.add(new TypeInsnNode(Opcodes.NEW, classDescr));
             mnStack.element().instructions.add(new InsnNode(Opcodes.DUP));
@@ -381,18 +374,10 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             FieldNode fd = new FieldNode(Opcodes.ACC_PUBLIC,sVar.getName(),entry.getType().getDescriptor(),null,null);
             structClass.fields.add(fd);
             
-            if(sVar instanceof Array){
-                mnStack.push(ctor);
-                sVar.accept(this);
-                mnStack.pop();
-
-                //DEBUG
-                // ctor.instructions.add(new FieldInsnNode(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;"));
-                // ctor.instructions.add(new InsnNode(Opcodes.DUP));
-                // ctor.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/util/Array", "toString", "()java/lang/String"));
-                // ctor.instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(java/lang/String)V"));
-            }
-            
+            //Init the arrays, structs in the constructor
+            mnStack.push(ctor);
+            sVar.accept(this);
+            mnStack.pop();
             
         }
         ctor.instructions.add(new InsnNode(Opcodes.RETURN));
@@ -493,14 +478,12 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         //Load struct reference
         mnStack.element().instructions.add(new VarInsnNode(Opcodes.ALOAD, entry.getIndex()));
 
-
         String owner = entry.getType().getInternalName();
         SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);
         SymTableEntry symEntry = structSymTable.lookup(node.getIdentifier());
 
         String valDesc = symEntry.getType().getDescriptor();
         mnStack.element().instructions.add(new FieldInsnNode(Opcodes.GETFIELD,owner,node.getIdentifier(),valDesc));
-
     }
 
     @Override
