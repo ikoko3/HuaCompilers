@@ -3,16 +3,17 @@ float myFunc(int i,float t) {
 	return i + t;
 }
 
-struct myStruct{
-	int x;
+struct s1{
+	float x;
+	int y[5];
 };
 
-struct s1{
-	float d;
-};
+
 
 void main() {
-	struct myStruct ms;
-	struct s1 tt;
+	struct s1 ms1;
+
+	ms1.x = 4;
+	print(ms1.x);
 }
 

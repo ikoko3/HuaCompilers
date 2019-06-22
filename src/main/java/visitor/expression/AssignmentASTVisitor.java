@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import types.TypeUtils;
 import ast.*;
@@ -20,7 +21,9 @@ import ast.definition.*;
 import ast.expression.*;
 import ast.statement.*;
 import core.ByteCodeUtils;
+import core.Environment;
 import core.Operator;
+import core.Registry;
 import symbol.SymTable;
 import symbol.SymTableEntry;
 
@@ -123,47 +126,57 @@ public class AssignmentASTVisitor implements ExpressionVisitor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void visit(StructArrayAccessExpression node) throws ASTVisitorException {
-        // node.getStruct().accept(this);
-       
-        // String struct_var;
-        // if(node.getStruct() instanceof IdentifierExpression){
-        //     IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-        //     struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
-        // }else{
-        //     struct_var = stack.pop();
-        // }
-        // struct_var = struct_var+"."+node.getIdentifier();
 
-        // Type type = ASTUtils.getType(node);
-        // String type_size = String.valueOf(type.getSize()*4);
 
-        
+        //LOAD ARRAY REFERENCE
+        IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
 
-        // node.getIndex().accept(this);
-        // String index = stack.pop();
-        // String address = createTemp();
-        // program.add(new BinaryOpInstr(Operator.MULTIPLY,type_size,index,address));
+        SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(expr.getIdentifier());
+        mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, entry.getIndex()));
 
-        // String t1 = createTemp();
-        // program.add(new AssignInstr(t1, struct_var));
+        String owner = entry.getType().getInternalName();
+        String valDesc = Type.getType("[I").getDescriptor();
+        mn.instructions.add(new FieldInsnNode(Opcodes.GETFIELD,owner,node.getIdentifier(),valDesc));
 
-        // String arr = Registry.getInstance().getDefinedArrays().get(node.getIdentifier());
-        // arr = t1 + "." + address; 
+        SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);
+        SymTableEntry symEntry = structSymTable.lookup(node.getIdentifier());
+        Type arrType = symEntry.getType().getElementType();
+        Type exprType = ASTUtils.getSafeType(value);
 
-        // stack.push(arr); 
+        //LOAD INDEX TO STACK
+        node.getIndex().accept(bCGenerator);
+        //LOAD VALUE TO STACK
+        value.accept(bCGenerator);
+         
+        ByteCodeUtils.widen(arrType,exprType,mn);
+        //ADD AASTORE
+        mn.instructions.add(new InsnNode(arrType.getOpcode(Opcodes.IASTORE)));
+
     }
 
     @Override
-    public void visit(StructVariableAccessExpression node) throws ASTVisitorException {
-        // node.getStruct().accept(this);
-       
-        // IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-        // String struct_var = Registry.getInstance().getDefinedStructs().get(expr.getIdentifier());
-        // struct_var = struct_var+"."+node.getIdentifier();
-        // //We know from the previous visitor that the struct is valid.
+    @SuppressWarnings("unchecked")
+    public void visit(StructVariableAccessExpression node) throws ASTVisitorException {  
+        //WORKS ONLY FOR SIMPLE STRUCTS!!      
+        IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
+        SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(expr.getIdentifier());
 
-        // stack.push(struct_var);
+        //Load struct reference
+        mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, entry.getIndex()));
+        //load value
+        value.accept(bCGenerator);
+
+
+        String owner = entry.getType().getInternalName();
+        SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);
+        SymTableEntry symEntry = structSymTable.lookup(node.getIdentifier());
+
+        String valDesc = symEntry.getType().getDescriptor();
+
+        ByteCodeUtils.widen(symEntry.getType(),ASTUtils.getSafeType(value), mn);
+        mn.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,owner,node.getIdentifier(),valDesc));
 
     }
 
