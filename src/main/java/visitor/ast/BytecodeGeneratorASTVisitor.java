@@ -27,6 +27,8 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
     private MethodNode initMn;
     private ClassNode cn;
     
+    private final Deque<String> structStack;
+
     private final Deque<MethodNode> mnStack;
     private final List<ClassNode> structsList;
 
@@ -41,6 +43,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
         mnStack = new ArrayDeque<MethodNode>();
         structsList = new ArrayList<ClassNode>();
+        structStack = new ArrayDeque<String>();
         
         initMn = new MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
         initMn.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
@@ -294,13 +297,28 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
 
     @Override
     public void visit(Array node) throws ASTVisitorException {
-        mnStack.element().instructions.add(new LdcInsnNode(node.getLength()));
+        
         SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(node.getName());
         Type elementType = entry.getType().getElementType();
 
-        mnStack.element().instructions.add(new VarInsnNode(Opcodes.NEWARRAY, getT_Type(elementType)));
         
-        mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
+        if(structStack.isEmpty()){
+            mnStack.element().instructions.add(new LdcInsnNode(node.getLength()));
+            mnStack.element().instructions.add(new VarInsnNode(Opcodes.NEWARRAY, getT_Type(elementType)));
+            
+            mnStack.element().instructions.add(new VarInsnNode(Opcodes.ASTORE, entry.getIndex()));
+        }
+        else{
+            String owner = structStack.element();
+            mnStack.element().instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+
+            mnStack.element().instructions.add(new LdcInsnNode(node.getLength()));
+            mnStack.element().instructions.add(new VarInsnNode(Opcodes.NEWARRAY, getT_Type(elementType)));
+
+        
+            mnStack.element().instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,owner,node.getName(),entry.getType().getDescriptor()));
+        }
+            
     }
 
     @Override
@@ -375,14 +393,17 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
             structClass.fields.add(fd);
             
             //Init the arrays, structs in the constructor
+            structStack.push(node.getName());
             mnStack.push(ctor);
+
             sVar.accept(this);
+
             mnStack.pop();
-            
+            structStack.pop();
         }
         ctor.instructions.add(new InsnNode(Opcodes.RETURN));
-        ctor.maxLocals = 100;
-        ctor.maxStack = 100;
+        ctor.maxLocals = 256;
+        ctor.maxStack = 256;
 
         structClass.methods.add(ctor);
         structsList.add(structClass);
@@ -463,7 +484,7 @@ public class BytecodeGeneratorASTVisitor implements ASTVisitor {
         //LOAD INDEX TO STACK
         node.getIndex().accept(this);
 
-        mnStack.element().instructions.add(new InsnNode(arrType.getOpcode(Opcodes.IASTORE)));
+        mnStack.element().instructions.add(new InsnNode(arrType.getOpcode(Opcodes.IALOAD)));
    
     }
 

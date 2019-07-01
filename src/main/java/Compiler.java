@@ -124,7 +124,7 @@ public class Compiler {
                     rcl.register(Environment.PROGRAM_NAME, code);
                     Class<?> programClass = rcl.loadClass(Environment.PROGRAM_NAME);
 
-                    //Class<?> structClass = rcl.loadClass("myStruct");
+                    Class<?> structClass = rcl.loadClass("s1");
 
                     //run main method
                     Method meth = programClass.getMethod("main");
