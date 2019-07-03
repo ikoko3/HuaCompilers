@@ -17,5 +17,5 @@ public class Environment {
     public static final String CLASS_FILE_EXTENSION = ".class";
     public static final String IN_FILE_EXTENSION = ".in";
 
-    public static String PROGRAM_NAME = "Test";
+    public static String PROGRAM_NAME = "Program";
 }

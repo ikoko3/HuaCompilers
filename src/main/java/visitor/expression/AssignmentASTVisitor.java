@@ -32,9 +32,6 @@ public class AssignmentASTVisitor implements ExpressionVisitor {
         this.mn = mn;
     }
 
-   
-
- 
     @Override
     public void visit(BinaryExpression node) throws ASTVisitorException {
         //nothing
@@ -143,25 +140,29 @@ public class AssignmentASTVisitor implements ExpressionVisitor {
 
     @Override
     @SuppressWarnings("unchecked")
-    public void visit(StructVariableAccessExpression node) throws ASTVisitorException {  
-        //WORKS ONLY FOR SIMPLE STRUCTS!!      
-        IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
-        SymTableEntry entry = ASTUtils.getSafeSymbolTable(node).lookup(expr.getIdentifier());
+    public void visit(StructVariableAccessExpression node) throws ASTVisitorException {     
+        String strId;
+        SymTableEntry entry;
+        if(node.getStruct() instanceof IdentifierExpression){
+            IdentifierExpression  expr = (IdentifierExpression)node.getStruct();
+            strId = expr.getIdentifier();
+            entry = ASTUtils.getSafeSymbolTable(node).lookup(strId);
 
-        //Load struct reference
-        mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, entry.getIndex()));
-        //load value
-        value.accept(bCGenerator);
+            mn.instructions.add(new VarInsnNode(Opcodes.ALOAD, entry.getIndex()));
 
-        String owner = entry.getType().getInternalName();
-        SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);
-        SymTableEntry symEntry = structSymTable.lookup(node.getIdentifier());
+            value.accept(bCGenerator);
 
-        String valDesc = symEntry.getType().getDescriptor();
+            String owner = entry.getType().getInternalName();
+            SymTable<SymTableEntry> structSymTable = Registry.getInstance().getStructs().get(owner);
+            SymTableEntry symEntry = structSymTable.lookup(node.getIdentifier());
 
-        ByteCodeUtils.widen(symEntry.getType(),ASTUtils.getSafeType(value), mn);
-        mn.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,owner,node.getIdentifier(),valDesc));
+            String valDesc = symEntry.getType().getDescriptor();
 
+            ByteCodeUtils.widen(symEntry.getType(),ASTUtils.getSafeType(value), mn);
+            mn.instructions.add(new FieldInsnNode(Opcodes.PUTFIELD,owner,node.getIdentifier(),valDesc));
+        }else{
+            node.getStruct().accept(bCGenerator);
+        }         
     }
 
 }

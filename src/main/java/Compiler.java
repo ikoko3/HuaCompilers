@@ -69,11 +69,11 @@ public class Compiler {
                     //collect types
                     compUnit.accept(new CollectTypesASTVisitor());
                     
-                    // print program
+                    //// print program
                     //LOGGER.info("Input:");
                     //compUnit.accept(new PrintASTVisitor());
                     
-                    // print 3-address code
+                    //// print 3-address code
                     // LOGGER.info("3-address code:");
                     // IntermediateCodeASTVisitor threeAddrVisitor = new IntermediateCodeASTVisitor();
                     // compUnit.accept(threeAddrVisitor);
@@ -96,8 +96,8 @@ public class Compiler {
                     LOGGER.info("Creating Struct classes.");
                     ReloadingClassLoader rcl = new ReloadingClassLoader(ClassLoader.getSystemClassLoader());
 
+                    /*For every struct, a class must be created.*/
                     for(ClassNode sNode : bytecodeVisitor.getStructsList()){
-
                         ClassWriter scw = new ClassWriter(ClassWriter.COMPUTE_MAXS + ClassWriter.COMPUTE_FRAMES);
                         TraceClassVisitor scv = new TraceClassVisitor(scw, new PrintWriter(System.out));
                         sNode.accept(scv);
@@ -123,8 +123,6 @@ public class Compiler {
                     
                     rcl.register(Environment.PROGRAM_NAME, code);
                     Class<?> programClass = rcl.loadClass(Environment.PROGRAM_NAME);
-
-                    Class<?> structClass = rcl.loadClass("s1");
 
                     //run main method
                     Method meth = programClass.getMethod("main");

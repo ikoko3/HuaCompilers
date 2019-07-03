@@ -3,12 +3,9 @@ float myFunc(int i,float t) {
 	return i + t;
 }
 
-
-
 struct s1{
-	float x;
-
-	int y[4];
+	struct s2 re;
+	int s;
 };
 
 struct s2{
@@ -17,8 +14,7 @@ struct s2{
 
 void main() {
 	struct s1 ms1;
-	ms1.y[2] = 48;
-
-	print(ms1.y[2]);
+	ms1.s = 3;
+	print(ms1.s);
 }
 
